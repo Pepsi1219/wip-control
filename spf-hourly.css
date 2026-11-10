@@ -19,9 +19,22 @@ header p{margin:4px 0 0;color:var(--mut);font-size:14px}
 .settings-toggle{display:grid;place-items:center;width:38px;height:38px;border:1px solid #33446d;border-radius:8px;background:#1c2a4d;color:var(--txt);font-size:22px;line-height:1;cursor:pointer;list-style:none}
 .settings-toggle::-webkit-details-marker{display:none}
 .settings-toggle:hover{background:#25376a}
-.settings-panel{position:absolute;z-index:10;top:calc(100% + 8px);right:0;width:min(420px,calc(100vw - 36px));max-height:calc(100vh - 80px);overflow:auto;padding:16px 18px;background:var(--panel);border:1px solid var(--line);border-radius:8px;box-shadow:0 12px 32px rgba(0,0,0,.35)}
-.settings-panel h2{margin:0 0 10px;font-size:17px;color:var(--cyan)}
+.settings-panel{position:absolute;z-index:10;top:calc(100% + 8px);right:0;width:min(560px,calc(100vw - 36px));max-height:calc(100vh - 80px);overflow:auto;padding:16px 18px;background:var(--panel);border:1px solid var(--line);border-radius:8px;box-shadow:0 12px 32px rgba(0,0,0,.35)}
+.settings-heading{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:12px}
+.settings-panel h2{margin:0;font-size:17px;color:var(--cyan)}
 .settings-panel p{margin:6px 0;font-size:14px}
+.settings-fields{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px 14px;margin-bottom:12px}
+.settings-panel .setting-field{display:grid;gap:4px;min-width:0;margin:0;color:var(--mut);font-size:13px}
+.settings-fields input{width:100%;min-width:0;background:#0a1226;border:1px solid #2f3f69;border-radius:6px;color:#fff;padding:6px 8px;text-align:center;font:inherit}
+.settings-fields input[aria-invalid="true"]{border-color:var(--red)}
+.display-toggle{position:relative;display:inline-flex;align-items:center;gap:8px;color:var(--mut);font-size:12px;cursor:pointer;white-space:nowrap}
+.display-toggle input{position:absolute;width:1px;height:1px;opacity:0}
+.display-switch{position:relative;width:38px;height:22px;flex:none;border:1px solid #465574;border-radius:12px;background:#0a1226;transition:background .16s,border-color .16s}
+.display-switch::before{position:absolute;top:2px;left:2px;width:16px;height:16px;border-radius:50%;background:#c5cbd6;content:"";transition:transform .16s}
+.display-toggle input:checked+.display-switch{border-color:var(--cyan);background:#17688a}
+.display-toggle input:checked+.display-switch::before{transform:translateX(16px);background:#fff}
+.display-toggle input:focus-visible+.display-switch{outline:2px solid var(--cyan);outline-offset:2px}
+.settings-panel .setting-error{color:var(--red)}
 .tblcard{background:var(--tbl);border-radius:14px;border:3px solid #6b7488;padding:6px 12px 10px}
 table.spf{width:100%;border-collapse:collapse;table-layout:fixed;color:#fff}
 table.spf col:nth-child(1){width:17%}
@@ -35,6 +48,7 @@ table.spf th,table.spf td{text-align:center;padding:0;font-weight:400;position:r
 table.spf thead th{color:#c5cbd6;font-weight:700;font-size:13px;letter-spacing:.2px;padding:12px 2px 10px;border-bottom:1px solid #3a4258;text-transform:uppercase}
 table.spf thead th:first-child{color:var(--cyan);text-transform:none;font-size:14px}
 table.spf tbody tr{height:62px;border-bottom:1px solid #2a3347}
+table.spf tbody tr.row-pending{visibility:hidden}
 table.spf tbody th{font-size:19px}
 table.spf td{font-size:20px}
 table.spf tfoot tr{height:66px;background:#101827}
@@ -73,13 +87,13 @@ section.lower>h2:first-child{margin-top:12px}
 .formula-summary-item h3{margin:0 0 6px;color:var(--cyan);font-size:14px}
 .formula-summary-item p,.formula-summary-item ul{margin:6px 0;font-size:13px;line-height:1.6}
 .formula-summary-item ul{padding-left:18px}
-table.set{border-collapse:collapse;font-size:14px;width:100%;max-width:640px}
-table.set th,table.set td{border:1px solid var(--line);padding:6px 10px;text-align:center}
-table.set th{background:#16213f;color:#c5cbd6;font-weight:600}
-table.set td.dep,table.set td.sel{background:rgba(255,212,0,.16)}
-table.set input{width:70px;background:#0a1226;border:1px solid #2f3f69;border-radius:6px;color:#fff;padding:4px 6px;text-align:center;font:inherit}
-.opening-input{width:80px;background:#0a1226;border:1px solid #2f3f69;border-radius:6px;color:#fff;padding:4px 6px;text-align:center;font:inherit}
+table.set{width:100%;border-collapse:collapse;font-size:12px;margin-top:12px}
+table.set th,table.set td{border:1px solid var(--line);padding:4px 8px;text-align:center}
+table.set thead th{background:#16213f;color:#c5cbd6;font-weight:600}
+table.set tbody tr:nth-child(even){background:rgba(255,255,255,.025)}
 table.set tfoot th,table.set tfoot td{background:#101827;color:var(--cyan);font-weight:700}
+.opening-input{width:80px;background:#0a1226;border:1px solid #2f3f69;border-radius:6px;color:#fff;padding:4px 6px;text-align:center;font:inherit}
+.time-input{width:130px;background:#0a1226;border:1px solid #2f3f69;border-radius:6px;color:#fff;padding:4px 6px;text-align:center;font:inherit}
 .lesson{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:16px}
 .lesson-controls{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:12px}
 .lesson-controls label{display:flex;align-items:center;gap:10px;font-size:14px;color:var(--mut)}
@@ -98,5 +112,5 @@ table.set tfoot th,table.set tfoot td{background:#101827;color:var(--cyan);font-
 .lesson-navigation button:hover:not(:disabled){background:#25376a}
 .lesson-navigation button:disabled{opacity:.45;cursor:not-allowed}
 @media(max-width:850px){.lesson-steps{grid-template-columns:repeat(3,minmax(0,1fr))}}
-@media(max-width:560px){.lesson-controls{align-items:flex-start;flex-direction:column}.lesson-steps{grid-template-columns:repeat(2,minmax(0,1fr))}.lesson-step{border-bottom:1px solid var(--line);border-radius:6px}.lesson-view{min-height:0}}
+@media(max-width:560px){.settings-heading{align-items:flex-start;flex-direction:column}.settings-fields{grid-template-columns:1fr}.lesson-controls{align-items:flex-start;flex-direction:column}.lesson-steps{grid-template-columns:repeat(2,minmax(0,1fr))}.lesson-step{border-bottom:1px solid var(--line);border-radius:6px}.lesson-view{min-height:0}}
 code{background:#0a1226;padding:1px 6px;border-radius:4px;font-size:13px;color:#d6e4ff}

@@ -12,9 +12,26 @@
   <details class="settings-menu">
     <summary class="settings-toggle" title="ตั้งค่า" aria-label="ตั้งค่า"><span aria-hidden="true">&#9881;</span></summary>
     <div class="settings-panel">
-      <h2>ค่าเริ่มต้น</h2>
-      <p>งานค้างในสายผลิตเมื่อวาน : <input id="open" class="opening-input" type="number" min="0"> ชิ้น</p>
-      <table class="set" id="set"></table>
+      <div class="settings-heading">
+        <h2>ค่าเริ่มต้น</h2>
+        <label class="display-toggle" data-setting="displayMode" for="displayAllHours">
+          <span>แสดงทุกชั่วโมง</span>
+          <input id="displayAllHours" type="checkbox">
+          <span class="display-switch" aria-hidden="true"></span>
+        </label>
+      </div>
+      <div class="settings-fields">
+        <label class="setting-field"><span>WIP เริ่มต้น</span><input id="open" class="opening-input" type="number" min="0"></label>
+        <label class="setting-field" data-setting="targetPerHour" for="targetPerHour">เป้าหมายต่อชั่วโมง<input id="targetPerHour" class="opening-input" type="number" min="0" step="1" value="75"></label>
+        <label class="setting-field" data-setting="shiftStart">เวลาเริ่มงาน<input id="shiftStart" class="time-input" type="text" autocomplete="off" maxlength="5" pattern="(08|09|10|11|12|13|14|15|16|17|18|19):00" placeholder="HH:00" value="08:00" aria-describedby="shiftError"></label>
+        <label class="setting-field" data-setting="shiftEnd">เวลาเลิกงาน<input id="shiftEnd" class="time-input" type="text" autocomplete="off" maxlength="5" pattern="(09|10|11|12|13|14|15|16|17|18|19|20):00" placeholder="HH:00" value="17:00" aria-describedby="shiftError"></label>
+      </div>
+      <p id="shiftError" class="setting-error" role="alert" hidden>เวลาเลิกงานต้องอยู่หลังเวลาเริ่มงาน และอยู่ในช่วง 08:00–20:00</p>
+      <table class="set" id="set">
+        <thead><tr><th scope="col">ช่วงเวลา</th><th scope="col">นาทีทำงาน</th><th scope="col">เป้าพื้นฐาน</th></tr></thead>
+        <tbody id="setRows"></tbody>
+        <tfoot><tr><th scope="row">รวม</th><td id="setMinutesTotal"></td><td id="setBaseTotal"></td></tr></tfoot>
+      </table>
     </div>
   </details>
 </header>
@@ -22,12 +39,10 @@
 <div class="wrap">
   <div class="toolbar">
     <button id="bReset" class="scenario-button" aria-pressed="false">ใช้ข้อมูล Demo</button>
-    <button id="bOpen0" class="scenario-button" aria-pressed="false">WIP เมื่อวาน = 0</button>
+    <button id="bLoadTarget" class="scenario-button" aria-pressed="false">LOAD = TARGET</button>
     <button id="bQcTarget" class="scenario-button" aria-pressed="false">QC PASS = TARGET</button>
-    <button id="bQcZero" class="scenario-button" aria-pressed="false">QC PASS = 0</button>
     <button id="bFnTarget" class="scenario-button" aria-pressed="false">SCAN BOX = TARGET</button>
-    <button id="bFnZero" class="scenario-button" aria-pressed="false">SCAN BOX = 0</button>
-    <button id="bAllZero" class="scenario-button" aria-pressed="true">Throughput = 0</button>
+    <button id="bRefresh" class="scenario-button">รีเซ็ต</button>
   </div>
   <div>
     <div class="tblcard">

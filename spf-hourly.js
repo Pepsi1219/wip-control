@@ -13,8 +13,72 @@ const N = v => {
   const n = Number(v);
   return Number.isFinite(n) ? n : 0;
 };
+const SHIFT_MINUTES = [60, 60, 60, 30, 30, 60, 60, 60, 60, 30, 60, 30];
 const NAME = { tl: 'TARGET LOAD', load: 'ACTUAL LOAD', tgt: 'HOURLY TARGET', qc: 'QC PASS', bal: 'BALANCE WIP', fn: 'SCAN BOX' };
 const LESSON_CELLS = ['bal', 'tgt', 'tl', 'load', 'qc', 'bal'];
+
+function makeShiftData(source, start, end, targetPerHour) {
+  const previousRows = new Map(source.rows.map(row => [row.l, row]));
+  let workedMinutes = 0;
+  const startHour = Number(start.slice(0, 2));
+  const endHour = Number(end.slice(0, 2));
+  const rows = [];
+
+  for (let hour = 8; hour < 20; hour++) {
+    if (hour < startHour || hour >= endHour) continue;
+    const minutes = SHIFT_MINUTES[hour - 8];
+    const previousMinutes = workedMinutes;
+    workedMinutes += minutes;
+    const label = `${String(hour).padStart(2, '0')}:00-${String(hour + 1).padStart(2, '0')}:00`;
+    const previous = previousRows.get(label) || {};
+    const baseTarget = Math.round(targetPerHour * workedMinutes / 60) - Math.round(targetPerHour * previousMinutes / 60);
+    rows.push({
+      l: label,
+      m: minutes,
+      b: baseTarget,
+      load: N(previous.load),
+      qc: N(previous.qc),
+      fn: N(previous.fn),
+      qcEntered: Boolean(previous.qcEntered)
+    });
+  }
+
+  return { open: N(source.open), rows };
+}
+
+function currentShiftData(source) {
+  return makeShiftData(source, $('#shiftStart').value, $('#shiftEnd').value, N($('#targetPerHour').value));
+}
+
+function visibleRowCount() {
+  if ($('#displayAllHours').checked) return S.rows.length;
+  let lastEntered = -1;
+  S.rows.forEach((row, i) => { if (row.qcEntered) lastEntered = i; });
+  return Math.min(S.rows.length, Math.max(1, lastEntered + 2));
+}
+
+function updateShiftSettings() {
+  const start = $('#shiftStart').value;
+  const end = $('#shiftEnd').value;
+  const startHour = Number(start.slice(0, 2));
+  const endHour = Number(end.slice(0, 2));
+  const valid = /^\d{2}:00$/.test(start) && /^\d{2}:00$/.test(end) && startHour >= 8 && endHour <= 20 && endHour > startHour;
+  $('#shiftError').hidden = valid;
+  $('#shiftStart').setAttribute('aria-invalid', String(!valid));
+  $('#shiftEnd').setAttribute('aria-invalid', String(!valid));
+  if (!valid) return;
+
+  const oldLesson = S.rows[lessonRow]?.l;
+  scenarioBase = currentShiftData(S);
+  S = JSON.parse(JSON.stringify(scenarioBase));
+  activeScenarios.clear();
+  demoSnapshot = null;
+  const nextLesson = S.rows.findIndex(row => row.l === oldLesson);
+  lessonRow = nextLesson >= 0 ? nextLesson : 0;
+  build();
+  updateScenarioButtons();
+  update();
+}
 
 function calc() {
   const rows = S.rows, n = rows.length;
@@ -51,6 +115,7 @@ const cells = {};
 function build() {
   const tb = $('#tb');
   tb.innerHTML = '';
+  Object.keys(cells).forEach(key => delete cells[key]);
   S.rows.forEach((r, i) => {
     const tr = document.createElement('tr');
     tr.innerHTML = `<th data-i="${i}">${r.l}</th>
@@ -63,15 +128,18 @@ function build() {
     tb.appendChild(tr);
   });
   $$('td[data-c]').forEach(td => { cells[td.dataset.i + '_' + td.dataset.c] = td; });
-  const set = $('#set');
-  set.innerHTML = '<thead><tr><th scope="col">คาบ</th><th scope="col">นาทีที่ต้องทำงาน</th><th scope="col">เป้าพื้นฐาน (ชิ้น)</th></tr></thead>' +
-    '<tbody>' + S.rows.map((r, i) => `<tr><td>${r.l}</td><td data-set="m${i}"><input type="number" min="0" data-k="m" data-i="${i}"></td><td data-set="b${i}"><input type="number" min="0" data-k="b" data-i="${i}"></td></tr>`).join('') +
-    '</tbody><tfoot><tr><th scope="row">รวม</th><td id="setMinutesTotal"></td><td id="setBaseTotal"></td></tr></tfoot>';
+  $('#setRows').innerHTML = S.rows.map(row => `<tr><td>${row.l}</td><td>${f(row.m)}</td><td>${f(row.b)}</td></tr>`).join('');
+  $('#setMinutesTotal').textContent = f(S.rows.reduce((total, row) => total + N(row.m), 0));
+  $('#setBaseTotal').textContent = f(S.rows.reduce((total, row) => total + N(row.b), 0));
   $('#lessonPeriod').innerHTML = S.rows.map((r, i) => `<option value="${i}">${r.l}</option>`).join('');
+  lessonRow = Math.min(lessonRow, S.rows.length - 1);
+  $('#lessonPeriod').value = String(lessonRow);
 }
 function syncInputs() {
   S.rows.forEach((r, i) => {
-    $$(`input[data-i="${i}"]`).forEach(inp => { if (document.activeElement !== inp) inp.value = r[inp.dataset.k]; });
+    $$(`input[data-i="${i}"]`).forEach(inp => {
+      if (document.activeElement !== inp) inp.value = inp.dataset.k === 'qc' && !r.qcEntered ? '' : r[inp.dataset.k];
+    });
   });
   if (document.activeElement !== $('#open')) $('#open').value = S.open;
 }
@@ -139,8 +207,14 @@ function selectLessonCell(R) {
 }
 function update() {
   const R = calc();
+  const shownCount = visibleRowCount();
   R.rows.forEach(x => {
     const i = x.i, g = c => cells[i + '_' + c];
+    const rowElement = g('tl').parentElement;
+    const pending = i >= shownCount;
+    rowElement.classList.toggle('row-pending', pending);
+    rowElement.setAttribute('aria-hidden', String(pending));
+    rowElement.inert = pending;
     g('tl').firstElementChild.textContent = f(x.tl);
     const ld = g('load').querySelector('input'); ld.className = 'cell w5 ' + x.loadCls;
     const t = g('tgt'); t.className = x.extra > 0 ? 'warn' : ''; t.firstElementChild.textContent = f(x.target);
@@ -150,15 +224,23 @@ function update() {
     const fi = g('fn').querySelector('input'); fi.className = 'cell ' + (x.fn > 0 && x.fn >= x.target ? 'pos' : '');
     const fd = g('fn').querySelector('small'); fd.className = 'diff' + (x.fnDiff > 0 ? ' up' : ''); fd.innerHTML = arrow(x.fnDiff);
   });
-  const T = R.T, g = c => cells['-1_' + c];
+  const shownRows = R.rows.slice(0, shownCount);
+  const T = { tl: 0, load: 0, tgt: 0, qc: 0, fn: 0, b: 0 };
+  shownRows.forEach(row => {
+    T.tl += row.tl; T.load += row.load; T.tgt += row.target;
+    T.qc += row.qc; T.fn += row.fn; T.b += row.b;
+  });
+  T.bal = shownRows.at(-1).bal;
+  T.qcDiff = shownRows.at(-1).qcDiff;
+  T.fnDiff = shownRows.at(-1).fnDiff;
+  T.loadCls = T.load < T.tl ? 'lo' : (T.load > 1.25 * T.tl ? 'hi' : '');
+  const g = c => cells['-1_' + c];
   g('tl').textContent = f(T.tl);
   g('load').innerHTML = `<span class="${T.loadCls}">${f(T.load)}</span>`;
   g('tgt').innerHTML = `<span class="${T.extra > 0 ? 'warn' : ''}">${f(T.tgt)}</span>`;
   g('qc').innerHTML = `<div class="cellwrap"><span class="${T.qc > 0 && T.qc >= T.tgt ? 'pos' : ''}">${f(T.qc)}</span><small class="diff${T.qcDiff > 0 ? ' up' : ''}">${arrow(T.qcDiff)}</small></div>`;
   g('bal').textContent = f(T.bal);
   g('fn').innerHTML = `<div class="cellwrap"><span class="${T.fn > 0 && T.fn >= T.tgt ? 'pos' : ''}">${f(T.fn)}</span><small class="diff${T.fnDiff > 0 ? ' up' : ''}">${arrow(T.fnDiff)}</small></div>`;
-  $('#setMinutesTotal').textContent = f(S.rows.reduce((total, row) => total + N(row.m), 0));
-  $('#setBaseTotal').textContent = f(T.b);
   syncInputs();
   paint(R);
   renderLesson(R);
@@ -170,11 +252,11 @@ function paint(R) {
   $$('.dep').forEach(e => e.classList.remove('dep'));
   const { i, c } = sel, n = S.rows.length, d = [];
   const addC = (ii, cc) => { const e = td(ii, cc); if (e) d.push(e); };
-  const addS = k => { const e = document.querySelector(`[data-set="${k}"]`); if (e) d.push(e); };
+  const addS = k => { const e = document.querySelector(`[data-setting="${k}"]`); if (e) d.push(e); };
   const s = td(i, c); if (s) s.classList.add('sel');
   if (i === -1) { for (let j = 0; j < n; j++) addC(j, c); if (c === 'bal') addC(n - 1, 'bal'); }
   else if (c === 'tl') { addC(i, 'tgt'); if (i > 0) addC(i - 1, 'bal'); else d.push($('#open').parentElement); }
-  else if (c === 'tgt') { for (let j = 0; j < n; j++) { if (j < i) { addS('b' + j); addC(j, 'qc'); } if (j >= i) addS('m' + j); } addS('b' + i); }
+  else if (c === 'tgt') { for (let j = 0; j < i; j++) addC(j, 'qc'); addS('shiftStart'); addS('shiftEnd'); addS('targetPerHour'); }
   else if (c === 'bal') { if (i > 0) addC(i - 1, 'bal'); else d.push($('#open').parentElement); addC(i, 'load'); addC(i, 'qc'); }
   else if (c === 'qc' || c === 'fn') { for (let j = 0; j <= i; j++) { addC(j, c); addC(j, 'tgt'); } }
   else if (c === 'load') addC(i, 'tl');
@@ -197,7 +279,7 @@ HOURLY TARGET   = ${f(x.target)}
 max(0, ${f(x.target)} − ${f(x.balBefore)}) = ${f(gap)}
 ${f(gap)} × 1.25 = ${f(gap * 1.25)}  → ปัด = ${f(x.tl)}</div>
     <div class="why"><b>ทำไมคิดแบบนี้:</b> ถ้างานที่ค้างในสายมากพอสำหรับเป้าชั่วโมงนี้แล้ว ก็ไม่ต้องโหลดเพิ่ม (ได้ 0) ถ้างานค้างไม่พอ ต้องโหลดส่วนที่ขาด และเผื่อไว้อีก 25% กันงานสะดุด</div>
-    ${x.tl === 0 ? '<div class="note">ตอนนี้เป็น 0 เพราะ Balance สูงกว่าเป้า ลองกดปุ่ม "ลอง Opening WIP = 0" เหนือตาราง แล้วดู Target Load ของแถวแรก</div>' : ''}`;
+    ${x.tl === 0 ? '<div class="note">ตอนนี้เป็น 0 เพราะ Balance สูงกว่าเป้า ลองกดปุ่ม "LOAD = TARGET" เหนือตาราง แล้วดู ACTUAL LOAD เทียบกับ TARGET LOAD</div>' : ''}`;
   }
   if (c === 'load') {
     const lim = 1.25 * x.tl;
@@ -267,8 +349,10 @@ ${f(T.fn)} − ${f(T.tgt)} = ${f(T.fnDiff)}</div>`;
 document.addEventListener('input', e => {
   const t = e.target;
   if (t.id === 'open') { S.open = N(t.value); clearScenarioSelectionForManualEdit(); update(); return; }
+  if (t.id === 'targetPerHour') { updateShiftSettings(); return; }
   if (t.dataset && t.dataset.k) {
     S.rows[t.dataset.i][t.dataset.k] = N(t.value);
+    if (t.dataset.k === 'qc') S.rows[t.dataset.i].qcEntered = t.value !== '';
     lessonRow = Number(t.dataset.i);
     $('#lessonPeriod').value = String(lessonRow);
     if (t.closest('td[data-c]')) sel = { i: +t.dataset.i, c: t.closest('td').dataset.c };
@@ -276,6 +360,9 @@ document.addEventListener('input', e => {
     update();
   }
 });
+$('#shiftStart').addEventListener('change', updateShiftSettings);
+$('#shiftEnd').addEventListener('change', updateShiftSettings);
+$('#displayAllHours').addEventListener('change', update);
 function pick(e) {
   const c = e.target.closest('td[data-c]');
   if (c) {
@@ -300,15 +387,19 @@ document.addEventListener('keydown', e => {
   }
 });
 function updateScenarioButtons() {
-  $$('.scenario-button').forEach(button => {
+  $$('.scenario-button:not(#bRefresh)').forEach(button => {
     button.setAttribute('aria-pressed', String(activeScenarios.has(button.id)));
   });
 }
 function applyScenarioSelection() {
   S = JSON.parse(JSON.stringify(scenarioBase));
-  if (activeScenarios.has('bOpen0')) S.open = 0;
-  if (activeScenarios.has('bQcTarget')) S.rows.forEach(row => row.qc = row.b);
-  if (activeScenarios.has('bQcZero')) S.rows.forEach(row => row.qc = 0);
+  if (activeScenarios.has('bQcTarget')) {
+    for (let i = 0; i < S.rows.length; i++) {
+      S.rows[i].qc = calc().rows[i].target;
+      S.rows[i].qcEntered = true;
+    }
+  }
+  if (activeScenarios.has('bQcZero')) S.rows.forEach(row => { row.qc = 0; row.qcEntered = false; });
 
   if (activeScenarios.has('bAllZero')) {
     S.rows.forEach(row => { row.qc = 0; row.fn = 0; });
@@ -317,6 +408,12 @@ function applyScenarioSelection() {
     if (activeScenarios.has('bFnTarget')) S.rows.forEach((row, i) => row.fn = targets[i]);
     if (activeScenarios.has('bFnZero')) S.rows.forEach(row => row.fn = 0);
   }
+  if (activeScenarios.has('bLoadTarget')) {
+    for (let i = 0; i < S.rows.length; i++) {
+      S.rows[i].load = calc().rows[i].tl;
+    }
+  }
+  if (activeScenarios.has('bLoadZero')) S.rows.forEach(row => row.load = 0);
   updateScenarioButtons();
   update();
 }
@@ -340,7 +437,8 @@ function toggleScenario(scenarioId) {
       base: JSON.parse(JSON.stringify(scenarioBase)),
       active: [...activeScenarios]
     };
-    scenarioBase = JSON.parse(JSON.stringify(DEF));
+    const demoData = { ...DEF, rows: DEF.rows.map(row => ({ ...row, qcEntered: true })) };
+    scenarioBase = currentShiftData(demoData);
     activeScenarios.clear();
     activeScenarios.add('bReset');
     applyScenarioSelection();
@@ -348,31 +446,36 @@ function toggleScenario(scenarioId) {
   }
 
   if (activeScenarios.has(scenarioId)) {
-    scenarioBase = JSON.parse(JSON.stringify(S));
     activeScenarios.delete(scenarioId);
+    if (scenarioId === 'bLoadTarget') activeScenarios.add('bLoadZero');
+    if (scenarioId === 'bQcTarget') activeScenarios.add('bQcZero');
+    if (scenarioId === 'bFnTarget') activeScenarios.add('bFnZero');
     applyScenarioSelection();
     return;
   }
 
   demoSnapshot = null;
   activeScenarios.delete('bReset');
+  if (scenarioId === 'bLoadTarget') activeScenarios.delete('bLoadZero');
+  if (scenarioId === 'bLoadZero') activeScenarios.delete('bLoadTarget');
   if (scenarioId === 'bQcTarget') activeScenarios.delete('bQcZero');
   if (scenarioId === 'bQcZero') activeScenarios.delete('bQcTarget');
   if (scenarioId === 'bFnTarget') activeScenarios.delete('bFnZero');
   if (scenarioId === 'bFnZero') activeScenarios.delete('bFnTarget');
   if (scenarioId === 'bAllZero') {
     ['bQcTarget', 'bQcZero', 'bFnTarget', 'bFnZero'].forEach(id => activeScenarios.delete(id));
-  } else if (scenarioId !== 'bOpen0') {
+  } else if (scenarioId !== 'bLoadTarget') {
     activeScenarios.delete('bAllZero');
   }
   activeScenarios.add(scenarioId);
 
-  if (scenarioId === 'bOpen0' && activeScenarios.has(scenarioId)) sel = { i: 0, c: 'tl' };
+  if (scenarioId === 'bLoadTarget' && activeScenarios.has(scenarioId)) sel = { i: 0, c: 'load' };
   applyScenarioSelection();
 }
-['bReset', 'bOpen0', 'bQcTarget', 'bQcZero', 'bFnTarget', 'bFnZero', 'bAllZero'].forEach(id => {
+['bReset', 'bLoadTarget', 'bQcTarget', 'bFnTarget'].forEach(id => {
   $('#' + id).onclick = () => toggleScenario(id);
 });
+$('#bRefresh').onclick = () => window.location.reload();
 $('#lessonPeriod').addEventListener('change', e => {
   lessonRow = Number(e.target.value);
   selectLessonCell(calc());
@@ -393,6 +496,9 @@ $('#lessonNext').onclick = () => {
   selectLessonCell(calc());
   renderLesson(calc());
 };
+const initialData = { ...DEF, rows: DEF.rows.map(row => ({ ...row, qcEntered: false })) };
+S = currentShiftData(initialData);
+scenarioBase = JSON.parse(JSON.stringify(S));
 build();
 applyScenarioSelection();
 const tableCard = $('.tblcard');

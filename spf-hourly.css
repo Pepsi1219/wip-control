@@ -38,12 +38,7 @@ header p{margin:4px 0 0;color:var(--mut);font-size:14px}
 .tblcard{background:var(--tbl);border-radius:14px;border:3px solid #6b7488;padding:6px 12px 10px}
 table.spf{width:100%;border-collapse:collapse;table-layout:fixed;color:#fff}
 table.spf col:nth-child(1){width:17%}
-table.spf col:nth-child(2){width:15%}
-table.spf col:nth-child(3){width:15%}
-table.spf col:nth-child(4){width:17%}
-table.spf col:nth-child(5){width:12%}
-table.spf col:nth-child(6){width:13%}
-table.spf col:nth-child(7){width:11%}
+table.spf col:nth-child(n+2){width:13.833333%}
 table.spf th,table.spf td{text-align:center;padding:0;font-weight:400;position:relative}
 table.spf thead th{color:#c5cbd6;font-weight:700;font-size:13px;letter-spacing:.2px;padding:12px 2px 10px;border-bottom:1px solid #3a4258;text-transform:uppercase}
 table.spf thead th:first-child{color:var(--cyan);text-transform:none;font-size:14px}
@@ -61,6 +56,7 @@ input.cell.w5{width:4.4ch}
 input.cell:hover{border-bottom-color:#4b5b86}
 input.cell:focus{border-bottom-color:var(--cyan)}
 .hi{color:var(--orange)} .lo{color:#7aa7ff} .pos{color:var(--green)} .warn{color:var(--yellow)}
+input.cell.pos{color:var(--green)}
 small.diff{font-size:.72em;color:var(--red);font-weight:400}
 small.diff.up{color:var(--green)}
 td.sel,th.sel{outline:2px solid var(--cyan);outline-offset:-3px;background:rgba(47,181,240,.10)}

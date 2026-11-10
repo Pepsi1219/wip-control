@@ -39,7 +39,8 @@ function makeShiftData(source, start, end, targetPerHour) {
       load: N(previous.load),
       qc: N(previous.qc),
       fn: N(previous.fn),
-      qcEntered: Boolean(previous.qcEntered)
+      qcEntered: Boolean(previous.qcEntered),
+      fnEntered: Boolean(previous.fnEntered)
     });
   }
 
@@ -52,9 +53,9 @@ function currentShiftData(source) {
 
 function visibleRowCount() {
   if ($('#displayAllHours').checked) return S.rows.length;
-  let lastEntered = -1;
-  S.rows.forEach((row, i) => { if (row.qcEntered) lastEntered = i; });
-  return Math.min(S.rows.length, Math.max(1, lastEntered + 2));
+  let count = 1;
+  while (count < S.rows.length && S.rows[count - 1].qcEntered && S.rows[count - 1].fnEntered) count++;
+  return count;
 }
 
 function updateShiftSettings() {
@@ -138,7 +139,8 @@ function build() {
 function syncInputs() {
   S.rows.forEach((r, i) => {
     $$(`input[data-i="${i}"]`).forEach(inp => {
-      if (document.activeElement !== inp) inp.value = inp.dataset.k === 'qc' && !r.qcEntered ? '' : r[inp.dataset.k];
+      const entered = inp.dataset.k === 'qc' ? r.qcEntered : inp.dataset.k === 'fn' ? r.fnEntered : true;
+      if (document.activeElement !== inp) inp.value = entered ? r[inp.dataset.k] : '';
     });
   });
   if (document.activeElement !== $('#open')) $('#open').value = S.open;
@@ -218,7 +220,7 @@ function update() {
     g('tl').firstElementChild.textContent = f(x.tl);
     const ld = g('load').querySelector('input'); ld.className = 'cell w5 ' + x.loadCls;
     const t = g('tgt'); t.className = x.extra > 0 ? 'warn' : ''; t.firstElementChild.textContent = f(x.target);
-    const qi = g('qc').querySelector('input'); qi.className = 'cell ' + (x.qc > 0 && x.qc >= x.target ? 'pos' : '');
+    const qi = g('qc').querySelector('input'); qi.className = 'cell ' + (x.qc > x.target ? 'pos' : '');
     const qd = g('qc').querySelector('small'); qd.className = 'diff' + (x.qcDiff > 0 ? ' up' : ''); qd.innerHTML = arrow(x.qcDiff);
     g('bal').firstElementChild.textContent = f(x.bal);
     const fi = g('fn').querySelector('input'); fi.className = 'cell ' + (x.fn > 0 && x.fn >= x.target ? 'pos' : '');
@@ -238,7 +240,7 @@ function update() {
   g('tl').textContent = f(T.tl);
   g('load').innerHTML = `<span class="${T.loadCls}">${f(T.load)}</span>`;
   g('tgt').innerHTML = `<span class="${T.extra > 0 ? 'warn' : ''}">${f(T.tgt)}</span>`;
-  g('qc').innerHTML = `<div class="cellwrap"><span class="${T.qc > 0 && T.qc >= T.tgt ? 'pos' : ''}">${f(T.qc)}</span><small class="diff${T.qcDiff > 0 ? ' up' : ''}">${arrow(T.qcDiff)}</small></div>`;
+  g('qc').innerHTML = `<div class="cellwrap"><span class="${T.qc > T.tgt ? 'pos' : ''}">${f(T.qc)}</span><small class="diff${T.qcDiff > 0 ? ' up' : ''}">${arrow(T.qcDiff)}</small></div>`;
   g('bal').textContent = f(T.bal);
   g('fn').innerHTML = `<div class="cellwrap"><span class="${T.fn > 0 && T.fn >= T.tgt ? 'pos' : ''}">${f(T.fn)}</span><small class="diff${T.fnDiff > 0 ? ' up' : ''}">${arrow(T.fnDiff)}</small></div>`;
   syncInputs();
@@ -312,7 +314,7 @@ Target Load = ${f(x.tl)}   เกณฑ์สูง = 1.25 × ${f(x.tl)} = ${f(l
 ΣQC สะสมถึงแถวนี้ = ${f(x.cumQ)}
 ΣHourly Target สะสม = ${f(x.cumT)}
 ลูกศร = ${f(x.cumQ)} − ${f(x.cumT)} = ${f(x.qcDiff)}</div>
-    <div class="why"><b>อ่านลูกศร:</b> ${x.qcDiff < 0 ? `ติดลบ ${f(Math.abs(x.qcDiff))} หมายถึง ณ แถวนี้ QC สะสม <b>ต่ำกว่าเป้าสะสม</b> อยู่ ${f(Math.abs(x.qcDiff))} ชิ้น (สีแดง)` : x.qcDiff > 0 ? `บวก ${f(x.qcDiff)} หมายถึงเกินเป้าสะสม (สีเขียว)` : 'เท่ากับเป้าสะสมพอดี จึงไม่แสดงลูกศร'}<br>ตัวเลขหลักเป็นสีเขียวเมื่อ QC ของคาบนั้นมากกว่า 0 และถึง Hourly Target<br><br>ช่องนี้เป็นข้อมูลนำเข้า แก้แล้ว Balance WIP, ยอดเพิ่มของ Hourly Target และลูกศรของแถวล่างทั้งหมดจะขยับ</div>`;
+    <div class="why"><b>อ่านลูกศร:</b> ${x.qcDiff < 0 ? `ติดลบ ${f(Math.abs(x.qcDiff))} หมายถึง ณ แถวนี้ QC สะสม <b>ต่ำกว่าเป้าสะสม</b> อยู่ ${f(Math.abs(x.qcDiff))} ชิ้น (สีแดง)` : x.qcDiff > 0 ? `บวก ${f(x.qcDiff)} หมายถึงเกินเป้าสะสม (สีเขียว)` : 'เท่ากับเป้าสะสมพอดี จึงไม่แสดงลูกศร'}<br>ตัวเลขหลักเป็นสีเขียวเมื่อ QC PASS มากกว่า HOURLY TARGET<br><br>ช่องนี้เป็นข้อมูลนำเข้า แก้แล้ว Balance WIP, ยอดเพิ่มของ Hourly Target และลูกศรของแถวล่างทั้งหมดจะขยับ</div>`;
   }
   if (c === 'bal') {
     return head + `<div class="formula">BALANCE WIP = BALANCE ก่อนหน้า + ACTUAL LOAD − QC PASS</div>
@@ -353,6 +355,7 @@ document.addEventListener('input', e => {
   if (t.dataset && t.dataset.k) {
     S.rows[t.dataset.i][t.dataset.k] = N(t.value);
     if (t.dataset.k === 'qc') S.rows[t.dataset.i].qcEntered = t.value !== '';
+    if (t.dataset.k === 'fn') S.rows[t.dataset.i].fnEntered = t.value !== '';
     lessonRow = Number(t.dataset.i);
     $('#lessonPeriod').value = String(lessonRow);
     if (t.closest('td[data-c]')) sel = { i: +t.dataset.i, c: t.closest('td').dataset.c };
@@ -405,8 +408,8 @@ function applyScenarioSelection() {
     S.rows.forEach(row => { row.qc = 0; row.fn = 0; });
   } else {
     const targets = calc().rows.map(row => row.target);
-    if (activeScenarios.has('bFnTarget')) S.rows.forEach((row, i) => row.fn = targets[i]);
-    if (activeScenarios.has('bFnZero')) S.rows.forEach(row => row.fn = 0);
+    if (activeScenarios.has('bFnTarget')) S.rows.forEach((row, i) => { row.fn = targets[i]; row.fnEntered = true; });
+    if (activeScenarios.has('bFnZero')) S.rows.forEach(row => { row.fn = 0; row.fnEntered = true; });
   }
   if (activeScenarios.has('bLoadTarget')) {
     for (let i = 0; i < S.rows.length; i++) {
@@ -437,7 +440,7 @@ function toggleScenario(scenarioId) {
       base: JSON.parse(JSON.stringify(scenarioBase)),
       active: [...activeScenarios]
     };
-    const demoData = { ...DEF, rows: DEF.rows.map(row => ({ ...row, qcEntered: true })) };
+    const demoData = { ...DEF, rows: DEF.rows.map(row => ({ ...row, qcEntered: true, fnEntered: true })) };
     scenarioBase = currentShiftData(demoData);
     activeScenarios.clear();
     activeScenarios.add('bReset');
@@ -496,15 +499,19 @@ $('#lessonNext').onclick = () => {
   selectLessonCell(calc());
   renderLesson(calc());
 };
-const initialData = { ...DEF, rows: DEF.rows.map(row => ({ ...row, qcEntered: false })) };
+const initialData = { ...DEF, rows: DEF.rows.map(row => ({ ...row, qcEntered: false, fnEntered: false })) };
 S = currentShiftData(initialData);
 scenarioBase = JSON.parse(JSON.stringify(S));
 build();
 applyScenarioSelection();
 const tableCard = $('.tblcard');
 const sidePanel = $('#side');
+const settingsPanel = $('.settings-panel');
 const syncSideHeight = () => {
+  const sideRect = sidePanel.getBoundingClientRect();
   sidePanel.style.height = `${tableCard.getBoundingClientRect().height}px`;
+  settingsPanel.style.width = `${sideRect.width}px`;
+  settingsPanel.style.height = `${sideRect.height}px`;
 };
 if ('ResizeObserver' in window) {
   const sideHeightObserver = new ResizeObserver(syncSideHeight);

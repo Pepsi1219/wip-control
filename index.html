@@ -30,11 +30,17 @@
       <div class="settings-panel">
         <div class="settings-heading">
           <h2 data-i18n="settings.title">ค่าเริ่มต้น</h2>
-          <label class="display-toggle" data-setting="displayMode" for="displayAllHours">
-            <span data-i18n="display.allHours">แสดงทุกชั่วโมง</span>
-            <input id="displayAllHours" type="checkbox">
-            <span class="display-switch" aria-hidden="true"></span>
-          </label>
+          <div class="settings-tools">
+            <label class="display-toggle" data-setting="displayMode" for="displayAllHours">
+              <span data-i18n="display.allHours">แสดงทุกชั่วโมง</span>
+              <input id="displayAllHours" type="checkbox">
+              <span class="display-switch" aria-hidden="true"></span>
+            </label>
+            <label class="slider-max-field" data-setting="valueSliderMax" for="valueSliderMaxSetting">
+              <span data-i18n="settings.sliderMax">ค่าสูงสุดของเกจ</span>
+              <input id="valueSliderMaxSetting" class="opening-input" type="number" min="1" max="1000000" step="1" value="200">
+            </label>
+          </div>
         </div>
         <div class="settings-fields">
           <label class="setting-field"><span data-i18n="settings.wip">WIP เริ่มต้น</span><input id="open" class="opening-input" type="number" min="0"></label>
@@ -75,18 +81,6 @@
       </table>
     </div>
   </div>
-  <div id="valueSliderPopover" class="value-slider-popover" role="group" hidden>
-    <div class="value-slider-heading">
-      <span id="valueSliderLabel"></span>
-      <output id="valueSliderOutput">0</output>
-    </div>
-    <input id="valueSlider" class="value-range" type="range" min="0" max="200" step="1" aria-label="Adjust value">
-    <div class="value-slider-scale">
-      <span>0</span>
-      <label class="value-slider-max-control"><span data-i18n="common.max">สูงสุด</span><input id="valueSliderMax" type="number" min="1" max="1000000" step="1" value="200" aria-label="สูงสุด" data-i18n-aria="common.max"></label>
-    </div>
-  </div>
- 
   <aside class="side" id="side">
     <div id="selectedExplanation" aria-live="polite"></div>
     <section class="formula-summary" aria-label="สรุปสูตรการคำนวณ" data-i18n-aria="formula.summaryLabel">

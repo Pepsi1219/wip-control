@@ -6,9 +6,6 @@ let demoSnapshot = null;
 let sel = { i: 0, c: 'tgt' };
 let lessonStep = 1;
 let lessonRow = 0;
-let activeValueInput = null;
-let suppressedValueSliderFocus = null;
-let valueSliderLimit = 200;
 const $ = s => document.querySelector(s);
 const $$ = s => [...document.querySelectorAll(s)];
 const f = x => Number(x).toLocaleString('en-US', { maximumFractionDigits: 1 });
@@ -16,54 +13,44 @@ const N = v => {
   const n = Number(v);
   return Number.isFinite(n) ? n : 0;
 };
-function positionValueSlider() {
-  if (!activeValueInput) return;
-  const popover = $('#valueSliderPopover');
-  const inputRect = activeValueInput.getBoundingClientRect();
-  const popoverRect = popover.getBoundingClientRect();
-  const left = Math.max(12, Math.min(inputRect.left + (inputRect.width - popoverRect.width) / 2, window.innerWidth - popoverRect.width - 12));
-  const below = inputRect.bottom + 8;
-  const top = below + popoverRect.height <= window.innerHeight - 8
-    ? below
-    : Math.max(8, inputRect.top - popoverRect.height - 8);
-  popover.style.left = `${left}px`;
-  popover.style.top = `${top}px`;
+const MAX_VALUE_SLIDER_LIMIT = 1000000;
+localStorage.removeItem('wip-slider-max');
+let valueSliderLimit = 200;
+let activeValueCell = null;
+
+function syncCellSlider(input, value) {
+  const slider = input.nextElementSibling;
+  const active = activeValueCell === input.closest('td');
+  slider.max = String(valueSliderLimit);
+  slider.step = String(Math.max(1, Math.ceil(valueSliderLimit / 300)));
+  const sliderValue = Math.min(N(value), valueSliderLimit);
+  slider.value = String(sliderValue);
+  slider.style.setProperty('--value-progress', `${valueSliderLimit ? sliderValue / valueSliderLimit * 100 : 0}%`);
+  slider.setAttribute('aria-label', window.WIP_I18N.t('metric.' + input.dataset.k));
+  slider.setAttribute('aria-hidden', String(!active));
+  slider.tabIndex = active ? 0 : -1;
 }
 
-function syncValueSlider() {
-  if (!activeValueInput) return;
-  const slider = $('#valueSlider');
-  const value = N(activeValueInput.value);
-  const max = valueSliderLimit;
-  const label = window.WIP_I18N.t('metric.' + activeValueInput.dataset.k);
-  slider.max = String(max);
-  slider.step = String(Math.max(1, Math.ceil(max / 300)));
-  slider.value = String(Math.min(value, max));
-  slider.setAttribute('aria-label', label);
-  $('#valueSliderLabel').textContent = label;
-  $('#valueSliderOutput').value = activeValueInput.value === '' ? '—' : f(value);
-  positionValueSlider();
-}
-
-function openValueSlider(input) {
-  if (activeValueInput && activeValueInput !== input) activeValueInput.setAttribute('aria-expanded', 'false');
-  activeValueInput = input;
-  input.setAttribute('aria-expanded', 'true');
-  $('#valueSliderPopover').hidden = false;
-  $('#valueSliderMax').value = String(valueSliderLimit);
-  syncValueSlider();
-}
-
-function closeValueSlider(restoreFocus = false) {
-  if (!activeValueInput) return;
-  const input = activeValueInput;
-  activeValueInput = null;
-  input.setAttribute('aria-expanded', 'false');
-  $('#valueSliderPopover').hidden = true;
-  if (restoreFocus) {
-    suppressedValueSliderFocus = input;
-    input.focus();
+function activateValueCell(input) {
+  const cell = input.closest('td[data-c]');
+  if (!cell) return;
+  if (activeValueCell !== cell) {
+    deactivateValueCell();
+    activeValueCell = cell;
+    cell.classList.add('slider-active');
   }
+  syncCellSlider(input, input.value);
+}
+
+function deactivateValueCell() {
+  if (!activeValueCell) return;
+  const slider = activeValueCell.querySelector('input.cell-slider');
+  activeValueCell.classList.remove('slider-active');
+  if (slider) {
+    slider.setAttribute('aria-hidden', 'true');
+    slider.tabIndex = -1;
+  }
+  activeValueCell = null;
 }
 const SHIFT_MINUTES = [60, 60, 60, 30, 30, 60, 60, 60, 60, 30, 60, 30];
 const LESSON_CELLS = ['bal', 'tgt', 'tl', 'load', 'qc', 'bal'];
@@ -231,6 +218,7 @@ function calc() {
 
 const cells = {};
 function build() {
+  deactivateValueCell();
   const tb = $('#tb');
   tb.innerHTML = '';
   Object.keys(cells).forEach(key => delete cells[key]);
@@ -238,11 +226,11 @@ function build() {
     const tr = document.createElement('tr');
     tr.innerHTML = `<th data-i="${i}">${r.l}</th>
       <td data-i="${i}" data-c="tl"><span></span></td>
-      <td data-i="${i}" data-c="load"><div class="cellwrap"><input class="cell w5" type="number" min="0" data-k="load" data-i="${i}" aria-controls="valueSliderPopover" aria-expanded="false"></div></td>
+      <td data-i="${i}" data-c="load"><div class="cellwrap"><input class="cell w5" type="number" min="0" data-k="load" data-i="${i}"><input class="cell-slider" type="range" min="0" max="200" step="1" tabindex="-1" aria-hidden="true"></div></td>
       <td data-i="${i}" data-c="tgt"><span></span></td>
-      <td data-i="${i}" data-c="qc"><div class="cellwrap"><input class="cell" type="number" min="0" data-k="qc" data-i="${i}" aria-controls="valueSliderPopover" aria-expanded="false"><small class="diff"></small></div></td>
+      <td data-i="${i}" data-c="qc"><div class="cellwrap"><input class="cell" type="number" min="0" data-k="qc" data-i="${i}"><input class="cell-slider" type="range" min="0" max="200" step="1" tabindex="-1" aria-hidden="true"><small class="diff"></small></div></td>
       <td data-i="${i}" data-c="bal"><span></span></td>
-      <td data-i="${i}" data-c="fn"><div class="cellwrap"><input class="cell" type="number" min="0" data-k="fn" data-i="${i}" aria-controls="valueSliderPopover" aria-expanded="false"><small class="diff"></small></div></td>`;
+      <td data-i="${i}" data-c="fn"><div class="cellwrap"><input class="cell" type="number" min="0" data-k="fn" data-i="${i}"><input class="cell-slider" type="range" min="0" max="200" step="1" tabindex="-1" aria-hidden="true"><small class="diff"></small></div></td>`;
     tb.appendChild(tr);
   });
   $$('td[data-c]').forEach(td => { cells[td.dataset.i + '_' + td.dataset.c] = td; });
@@ -338,11 +326,14 @@ function update() {
     rowElement.inert = pending;
     g('tl').firstElementChild.textContent = f(x.tl);
     const ld = g('load').querySelector('input'); ld.className = 'cell w5 ' + x.loadCls;
+    syncCellSlider(ld, x.load);
     const t = g('tgt'); t.className = x.extra > 0 ? 'warn' : ''; t.firstElementChild.textContent = f(x.target);
     const qi = g('qc').querySelector('input'); qi.className = 'cell ' + (x.qc > x.target ? 'pos' : '');
+    syncCellSlider(qi, x.qc);
     const qd = g('qc').querySelector('small'); qd.className = 'diff' + (x.qcDiff > 0 ? ' up' : ''); qd.innerHTML = arrow(x.qcDiff);
     g('bal').firstElementChild.textContent = f(x.bal);
     const fi = g('fn').querySelector('input'); fi.className = 'cell ' + (x.fn > 0 && x.fn >= x.target ? 'pos' : '');
+    syncCellSlider(fi, x.fn);
     const fd = g('fn').querySelector('small'); fd.className = 'diff' + (x.fnDiff > 0 ? ' up' : ''); fd.innerHTML = arrow(x.fnDiff);
   });
   const shownRows = R.rows.slice(0, shownCount);
@@ -363,7 +354,6 @@ function update() {
   g('bal').textContent = f(T.bal);
   g('fn').innerHTML = `<div class="cellwrap"><span class="${T.fn > 0 && T.fn >= T.tgt ? 'pos' : ''}">${f(T.fn)}</span><small class="diff${T.fnDiff > 0 ? ' up' : ''}">${arrow(T.fnDiff)}</small></div>`;
   syncInputs();
-  syncValueSlider();
   paint(R);
   renderLesson(R);
 }
@@ -451,6 +441,12 @@ function explainSum(R, c) {
 
 document.addEventListener('input', e => {
   const t = e.target;
+  if (t.matches('input.cell-slider')) {
+    const valueInput = t.previousElementSibling;
+    valueInput.value = t.value;
+    valueInput.dispatchEvent(new Event('input', { bubbles: true }));
+    return;
+  }
   if (t.id === 'open') { S.open = N(t.value); clearScenarioSelectionForManualEdit(); update(); return; }
   if (t.id === 'targetPerHour') { updateShiftSettings(); return; }
   if (t.dataset && t.dataset.k) {
@@ -468,6 +464,17 @@ document.addEventListener('input', e => {
 $('#shiftStart').addEventListener('change', () => updateShiftSettings(shiftStartPicker));
 $('#shiftEnd').addEventListener('change', () => updateShiftSettings(shiftEndPicker));
 $('#displayAllHours').addEventListener('change', update);
+$('#valueSliderMaxSetting').value = String(valueSliderLimit);
+$('#valueSliderMaxSetting').addEventListener('change', e => {
+  const max = Number(e.target.value);
+  if (!Number.isSafeInteger(max) || max < 1) {
+    e.target.value = String(valueSliderLimit);
+    return;
+  }
+  valueSliderLimit = Math.min(max, MAX_VALUE_SLIDER_LIMIT);
+  e.target.value = String(valueSliderLimit);
+  update();
+});
 $('#languageSelect').addEventListener('change', e => {
   window.WIP_I18N.setLanguage(e.target.value);
   update();
@@ -490,52 +497,26 @@ function pick(e) {
   }
 }
 document.addEventListener('click', pick);
-document.addEventListener('click', e => {
-  const input = e.target.closest('input.cell[data-k]');
-  if (input) {
-    if (suppressedValueSliderFocus === input) suppressedValueSliderFocus = null;
-    openValueSlider(input);
-  } else if (!$('#valueSliderPopover').contains(e.target)) {
-    closeValueSlider();
-  }
-});
 document.addEventListener('focusin', e => {
   pick(e);
   const input = e.target.closest('input.cell[data-k]');
-  if (input) {
-    if (suppressedValueSliderFocus === input) {
-      suppressedValueSliderFocus = null;
-      return;
-    }
-    openValueSlider(input);
-  } else if (!$('#valueSliderPopover').contains(e.target)) {
-    closeValueSlider();
-  }
+  if (input) activateValueCell(input);
+  else if (e.target.matches('input.cell-slider')) activateValueCell(e.target.previousElementSibling);
+  else if (activeValueCell && !activeValueCell.contains(e.target)) deactivateValueCell();
 });
-$('#valueSlider').addEventListener('input', e => {
-  if (!activeValueInput) return;
-  activeValueInput.value = e.target.value;
-  activeValueInput.dispatchEvent(new Event('input', { bubbles: true }));
+document.addEventListener('click', e => {
+  const input = e.target.closest('input.cell[data-k]');
+  if (input) activateValueCell(input);
+  else if (e.target.matches('input.cell-slider')) activateValueCell(e.target.previousElementSibling);
+  else if (activeValueCell && !activeValueCell.contains(e.target)) deactivateValueCell();
 });
-$('#valueSliderMax').addEventListener('input', e => {
+$('#valueSliderMaxSetting').addEventListener('input', e => {
   const max = Number(e.target.value);
-  if (!Number.isFinite(max) || max < 1) return;
-  valueSliderLimit = Math.min(1000000, Math.floor(max));
-  syncValueSlider();
+  if (!Number.isSafeInteger(max) || max < 1) return;
+  valueSliderLimit = Math.min(max, MAX_VALUE_SLIDER_LIMIT);
+  update();
 });
-$('#valueSliderMax').addEventListener('change', e => {
-  const max = Number(e.target.value);
-  valueSliderLimit = Number.isFinite(max) ? Math.min(1000000, Math.max(1, Math.floor(max))) : 200;
-  e.target.value = String(valueSliderLimit);
-  syncValueSlider();
-});
-document.addEventListener('scroll', positionValueSlider, true);
-window.addEventListener('resize', positionValueSlider);
 document.addEventListener('keydown', e => {
-  if (e.key === 'Escape' && activeValueInput) {
-    closeValueSlider(true);
-    return;
-  }
   const settingsMenu = $('.settings-menu');
   if (e.key === 'Escape' && settingsMenu.open) {
     settingsMenu.open = false;
@@ -562,7 +543,7 @@ function applyScenarioSelection() {
   } else {
     const targets = calc().rows.map(row => row.target);
     if (activeScenarios.has('bFnTarget')) S.rows.forEach((row, i) => { row.fn = targets[i]; row.fnEntered = true; });
-    if (activeScenarios.has('bFnZero')) S.rows.forEach(row => { row.fn = 0; row.fnEntered = true; });
+    if (activeScenarios.has('bFnZero')) S.rows.forEach(row => { row.fn = 0; row.fnEntered = false; });
   }
   if (activeScenarios.has('bLoadTarget')) {
     for (let i = 0; i < S.rows.length; i++) {
@@ -673,7 +654,7 @@ $('#lessonNext').onclick = () => {
   selectLessonCell(calc());
   renderLesson(calc());
 };
-const initialData = { ...DEF, rows: DEF.rows.map(row => ({ ...row, qcEntered: false, fnEntered: false })) };
+const initialData = { ...DEF, rows: DEF.rows.map(row => ({ ...row, load: 0, loadEntered: false, qcEntered: false, fnEntered: false })) };
 S = currentShiftData(initialData);
 scenarioBase = JSON.parse(JSON.stringify(S));
 build();

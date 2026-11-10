@@ -3,9 +3,12 @@ let S = JSON.parse(JSON.stringify(DEF));
 let scenarioBase = JSON.parse(JSON.stringify(DEF));
 const activeScenarios = new Set(['bAllZero']);
 let demoSnapshot = null;
-let sel = { i: 0, c: 'bal' };
-let lessonStep = 0;
+let sel = { i: 0, c: 'tgt' };
+let lessonStep = 1;
 let lessonRow = 0;
+let activeValueInput = null;
+let suppressedValueSliderFocus = null;
+let valueSliderLimit = 200;
 const $ = s => document.querySelector(s);
 const $$ = s => [...document.querySelectorAll(s)];
 const f = x => Number(x).toLocaleString('en-US', { maximumFractionDigits: 1 });
@@ -13,23 +16,137 @@ const N = v => {
   const n = Number(v);
   return Number.isFinite(n) ? n : 0;
 };
+function positionValueSlider() {
+  if (!activeValueInput) return;
+  const popover = $('#valueSliderPopover');
+  const inputRect = activeValueInput.getBoundingClientRect();
+  const popoverRect = popover.getBoundingClientRect();
+  const left = Math.max(12, Math.min(inputRect.left + (inputRect.width - popoverRect.width) / 2, window.innerWidth - popoverRect.width - 12));
+  const below = inputRect.bottom + 8;
+  const top = below + popoverRect.height <= window.innerHeight - 8
+    ? below
+    : Math.max(8, inputRect.top - popoverRect.height - 8);
+  popover.style.left = `${left}px`;
+  popover.style.top = `${top}px`;
+}
+
+function syncValueSlider() {
+  if (!activeValueInput) return;
+  const slider = $('#valueSlider');
+  const value = N(activeValueInput.value);
+  const max = valueSliderLimit;
+  const label = window.WIP_I18N.t('metric.' + activeValueInput.dataset.k);
+  slider.max = String(max);
+  slider.step = String(Math.max(1, Math.ceil(max / 300)));
+  slider.value = String(Math.min(value, max));
+  slider.setAttribute('aria-label', label);
+  $('#valueSliderLabel').textContent = label;
+  $('#valueSliderOutput').value = activeValueInput.value === '' ? '—' : f(value);
+  positionValueSlider();
+}
+
+function openValueSlider(input) {
+  if (activeValueInput && activeValueInput !== input) activeValueInput.setAttribute('aria-expanded', 'false');
+  activeValueInput = input;
+  input.setAttribute('aria-expanded', 'true');
+  $('#valueSliderPopover').hidden = false;
+  $('#valueSliderMax').value = String(valueSliderLimit);
+  syncValueSlider();
+}
+
+function closeValueSlider(restoreFocus = false) {
+  if (!activeValueInput) return;
+  const input = activeValueInput;
+  activeValueInput = null;
+  input.setAttribute('aria-expanded', 'false');
+  $('#valueSliderPopover').hidden = true;
+  if (restoreFocus) {
+    suppressedValueSliderFocus = input;
+    input.focus();
+  }
+}
 const SHIFT_MINUTES = [60, 60, 60, 30, 30, 60, 60, 60, 60, 30, 60, 30];
-const NAME = { tl: 'TARGET LOAD', load: 'ACTUAL LOAD', tgt: 'HOURLY TARGET', qc: 'QC PASS', bal: 'BALANCE WIP', fn: 'SCAN BOX' };
 const LESSON_CELLS = ['bal', 'tgt', 'tl', 'load', 'qc', 'bal'];
+function fitPickerCalendar(_, __, picker) {
+  picker.calendarContainer.style.width = `${Math.ceil(picker.input.getBoundingClientRect().width)}px`;
+}
+
+const timePickerOptions = {
+  enableTime: true,
+  noCalendar: true,
+  dateFormat: 'h:i K',
+  time_24hr: false,
+  minuteIncrement: 5,
+  allowInput: false,
+  disableMobile: true,
+  onOpen: fitPickerCalendar,
+  minTime: '08:00',
+  maxTime: '20:00'
+};
+const shiftStartPicker = flatpickr('#shiftStart', { ...timePickerOptions, defaultDate: '8:00 AM', maxTime: '19:55' });
+const shiftEndPicker = flatpickr('#shiftEnd', { ...timePickerOptions, defaultDate: '5:00 PM', minTime: '08:05' });
+
+function pickerMinutes(picker) {
+  const date = picker.selectedDates[0];
+  return date ? date.getHours() * 60 + date.getMinutes() : NaN;
+}
+
+function clockValue(minutes) {
+  const hour = Math.floor(minutes / 60);
+  const minute = minutes % 60;
+  return `${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}`;
+}
+
+function setPickerMinutes(picker, minutes) {
+  const date = new Date(2000, 0, 1, Math.floor(minutes / 60), minutes % 60);
+  picker.setDate(date, false);
+}
+
+function normalizeShiftPickers(changedPicker) {
+  let start = pickerMinutes(shiftStartPicker);
+  let end = pickerMinutes(shiftEndPicker);
+  if (!Number.isFinite(start) || !Number.isFinite(end)) return false;
+
+  if (start >= end && changedPicker === shiftStartPicker) {
+    end = start + 5;
+    if (end > 20 * 60) {
+      start = 20 * 60 - 5;
+      end = 20 * 60;
+      setPickerMinutes(shiftStartPicker, start);
+    }
+    setPickerMinutes(shiftEndPicker, end);
+  } else if (start >= end && changedPicker === shiftEndPicker) {
+    start = end - 5;
+    if (start < 8 * 60) {
+      start = 8 * 60;
+      end = start + 5;
+      setPickerMinutes(shiftEndPicker, end);
+    }
+    setPickerMinutes(shiftStartPicker, start);
+  }
+
+  return pickerMinutes(shiftStartPicker) < pickerMinutes(shiftEndPicker);
+}
 
 function makeShiftData(source, start, end, targetPerHour) {
   const previousRows = new Map(source.rows.map(row => [row.l, row]));
   let workedMinutes = 0;
-  const startHour = Number(start.slice(0, 2));
-  const endHour = Number(end.slice(0, 2));
+  const [startHour, startMinute] = start.split(':').map(Number);
+  const [endHour, endMinute] = end.split(':').map(Number);
+  const startMinutes = startHour * 60 + startMinute;
+  const endMinutes = endHour * 60 + endMinute;
   const rows = [];
 
   for (let hour = 8; hour < 20; hour++) {
-    if (hour < startHour || hour >= endHour) continue;
-    const minutes = SHIFT_MINUTES[hour - 8];
+    const periodStart = hour * 60;
+    const periodEnd = periodStart + 60;
+    const activeStart = Math.max(periodStart, startMinutes);
+    const activeEnd = Math.min(periodEnd, endMinutes);
+    if (activeEnd <= activeStart) continue;
+    const minutes = Math.min(SHIFT_MINUTES[hour - 8], activeEnd - activeStart);
     const previousMinutes = workedMinutes;
     workedMinutes += minutes;
-    const label = `${String(hour).padStart(2, '0')}:00-${String(hour + 1).padStart(2, '0')}:00`;
+    const label = `${clockValue(activeStart)}-${clockValue(activeEnd)}`;
     const previous = previousRows.get(label) || {};
     const baseTarget = Math.round(targetPerHour * workedMinutes / 60) - Math.round(targetPerHour * previousMinutes / 60);
     rows.push({
@@ -37,6 +154,7 @@ function makeShiftData(source, start, end, targetPerHour) {
       m: minutes,
       b: baseTarget,
       load: N(previous.load),
+      loadEntered: previous.loadEntered ?? true,
       qc: N(previous.qc),
       fn: N(previous.fn),
       qcEntered: Boolean(previous.qcEntered),
@@ -48,7 +166,7 @@ function makeShiftData(source, start, end, targetPerHour) {
 }
 
 function currentShiftData(source) {
-  return makeShiftData(source, $('#shiftStart').value, $('#shiftEnd').value, N($('#targetPerHour').value));
+  return makeShiftData(source, clockValue(pickerMinutes(shiftStartPicker)), clockValue(pickerMinutes(shiftEndPicker)), N($('#targetPerHour').value));
 }
 
 function visibleRowCount() {
@@ -58,12 +176,11 @@ function visibleRowCount() {
   return count;
 }
 
-function updateShiftSettings() {
-  const start = $('#shiftStart').value;
-  const end = $('#shiftEnd').value;
-  const startHour = Number(start.slice(0, 2));
-  const endHour = Number(end.slice(0, 2));
-  const valid = /^\d{2}:00$/.test(start) && /^\d{2}:00$/.test(end) && startHour >= 8 && endHour <= 20 && endHour > startHour;
+function updateShiftSettings(changedPicker) {
+  normalizeShiftPickers(changedPicker);
+  const start = pickerMinutes(shiftStartPicker);
+  const end = pickerMinutes(shiftEndPicker);
+  const valid = Number.isFinite(start) && Number.isFinite(end) && start >= 8 * 60 && end <= 20 * 60 && end > start;
   $('#shiftError').hidden = valid;
   $('#shiftStart').setAttribute('aria-invalid', String(!valid));
   $('#shiftEnd').setAttribute('aria-invalid', String(!valid));
@@ -121,11 +238,11 @@ function build() {
     const tr = document.createElement('tr');
     tr.innerHTML = `<th data-i="${i}">${r.l}</th>
       <td data-i="${i}" data-c="tl"><span></span></td>
-      <td data-i="${i}" data-c="load"><div class="cellwrap"><input class="cell w5" type="number" min="0" data-k="load" data-i="${i}"></div></td>
+      <td data-i="${i}" data-c="load"><div class="cellwrap"><input class="cell w5" type="number" min="0" data-k="load" data-i="${i}" aria-controls="valueSliderPopover" aria-expanded="false"></div></td>
       <td data-i="${i}" data-c="tgt"><span></span></td>
-      <td data-i="${i}" data-c="qc"><div class="cellwrap"><input class="cell" type="number" min="0" data-k="qc" data-i="${i}"><small class="diff"></small></div></td>
+      <td data-i="${i}" data-c="qc"><div class="cellwrap"><input class="cell" type="number" min="0" data-k="qc" data-i="${i}" aria-controls="valueSliderPopover" aria-expanded="false"><small class="diff"></small></div></td>
       <td data-i="${i}" data-c="bal"><span></span></td>
-      <td data-i="${i}" data-c="fn"><div class="cellwrap"><input class="cell" type="number" min="0" data-k="fn" data-i="${i}"><small class="diff"></small></div></td>`;
+      <td data-i="${i}" data-c="fn"><div class="cellwrap"><input class="cell" type="number" min="0" data-k="fn" data-i="${i}" aria-controls="valueSliderPopover" aria-expanded="false"><small class="diff"></small></div></td>`;
     tb.appendChild(tr);
   });
   $$('td[data-c]').forEach(td => { cells[td.dataset.i + '_' + td.dataset.c] = td; });
@@ -139,7 +256,7 @@ function build() {
 function syncInputs() {
   S.rows.forEach((r, i) => {
     $$(`input[data-i="${i}"]`).forEach(inp => {
-      const entered = inp.dataset.k === 'qc' ? r.qcEntered : inp.dataset.k === 'fn' ? r.fnEntered : true;
+      const entered = inp.dataset.k === 'load' ? r.loadEntered : inp.dataset.k === 'qc' ? r.qcEntered : r.fnEntered;
       if (document.activeElement !== inp) inp.value = entered ? r[inp.dataset.k] : '';
     });
   });
@@ -150,50 +267,52 @@ function arrow(d) {
   return d < 0 ? `<span aria-hidden="true">↓</span>${f(Math.abs(d))}` : `<span aria-hidden="true">↑</span>${f(d)}`;
 }
 function renderLesson(R) {
+  const t = window.WIP_I18N.t;
   const x = R.rows[lessonRow], row = S.rows[lessonRow], previous = S.rows[lessonRow - 1];
   const extraFormula = x.remain > 0
     ? `round(${f(x.shortfall)} × ${f(x.m)} ÷ ${f(x.remain)}) = ${f(x.extra)}`
-    : '0 (ไม่มีเวลาทำงานเหลือ)';
+    : t('lesson.noTime');
   const steps = [
     {
-      title: 'เริ่มจาก WIP ที่ยกมาจากเมื่อวาน',
-      description: lessonRow === 0
-        ? 'คาบแรกเริ่มจากจำนวนงานที่ค้างในสายผลิตเมื่อวาน ค่านี้เป็นจุดตั้งต้นของ Balance ในวันนี้'
-        : 'คาบนี้เริ่มจาก Balance ที่เหลือหลังจบคาบก่อนหน้า ค่า WIP จะถูกส่งต่อไปทีละคาบ',
+      title: t('lesson.startTitle'),
+      description: t(lessonRow === 0 ? 'lesson.startDescFirst' : 'lesson.startDescNext'),
       calculation: lessonRow === 0
-        ? `งานค้างในสายผลิตเมื่อวาน = ${f(S.open)} ชิ้น\nWIP ก่อน ${row.l} = ${f(x.balBefore)} ชิ้น`
-        : `Balance หลัง ${previous.l} = ${f(x.balBefore)} ชิ้น\nWIP ก่อน ${row.l} = ${f(x.balBefore)} ชิ้น`
+        ? t('lesson.startCalcFirst', { open: f(S.open), period: row.l, balance: f(x.balBefore) })
+        : t('lesson.startCalcNext', { previous: previous.l, period: row.l, balance: f(x.balBefore) })
     },
     {
-      title: 'กำหนดเป้าหมายของคาบนี้',
-      description: 'เริ่มจากเป้าพื้นฐาน แล้วบวกยอดที่ต้องไล่ตามจากคาบก่อน ๆ ตามเวลาทำงานที่ยังเหลือ ยอดเพิ่มนี้เป็นสูตรจำลองจากข้อมูลตัวอย่าง ไม่ใช่สูตรยืนยันจาก server',
-      calculation: `ยอดขาดสะสม = max(0, ${f(x.cumBBefore)} − ${f(x.cumQBefore)}) = ${f(x.shortfall)} ชิ้น\nยอดเพิ่ม = ${extraFormula}\nเป้าพื้นฐาน ${f(x.b)} + ยอดเพิ่ม ${f(x.extra)} = HOURLY TARGET ${f(x.target)} ชิ้น`
+      title: t('lesson.targetTitle'),
+      description: t('lesson.targetDesc'),
+      calculation: t('lesson.targetCalc', {
+        baseBefore: f(x.cumBBefore), qcBefore: f(x.cumQBefore), shortfall: f(x.shortfall), extraFormula,
+        base: f(x.b), extra: f(x.extra), target: f(x.target)
+      })
     },
     {
-      title: 'คำนวณจำนวนงานที่ควรโหลด',
-      description: 'นำเป้าของคาบนี้ลบ WIP ที่มีอยู่แล้ว ถ้ายังขาดจึงโหลดเพิ่ม และเผื่ออีก 25% ถ้า WIP มากกว่าเป้า TARGET LOAD จะเป็นศูนย์',
-      calculation: `round(max(0, HOURLY TARGET − WIP ก่อนคาบ) × 1.25)\nround(max(0, ${f(x.target)} − ${f(x.balBefore)}) × 1.25) = ${f(x.tl)} ชิ้น`
+      title: t('lesson.loadTitle'),
+      description: t('lesson.loadDesc'),
+      calculation: t('lesson.loadCalc', { target: f(x.target), balance: f(x.balBefore), load: f(x.tl) })
     },
     {
-      title: 'รับจำนวนงานที่โหลดเข้าจริง',
-      description: 'ACTUAL LOAD มาจากระบบหลังบ้าน บทเรียนใช้ค่านี้ตามจริงเพื่อจำลองว่างานในสายเพิ่มขึ้นเท่าไร',
-      calculation: `ACTUAL LOAD ของ ${row.l} = ${f(x.load)} ชิ้น\nWIP หลังโหลด = ${f(x.balBefore)} + ${f(x.load)} = ${f(x.balBefore + x.load)} ชิ้น`
+      title: t('lesson.actualTitle'),
+      description: t('lesson.actualDesc'),
+      calculation: t('lesson.actualCalc', { period: row.l, load: f(x.load), balance: f(x.balBefore), afterLoad: f(x.balBefore + x.load) })
     },
     {
-      title: 'หักงานที่ผ่าน QC',
-      description: 'QC PASS คืองานที่ผ่านการตรวจคุณภาพ รวมงานแก้ไขที่กลับมาผ่านแล้ว งานส่วนนี้ออกจาก WIP ในสาย',
-      calculation: `QC PASS ของ ${row.l} = ${f(x.qc)} ชิ้น\nงานที่ผ่าน QC จะถูกหักออกจาก WIP`
+      title: t('lesson.qcTitle'),
+      description: t('lesson.qcDesc'),
+      calculation: t('lesson.qcCalc', { period: row.l, qc: f(x.qc) })
     },
     {
-      title: 'ได้ Balance WIP สำหรับคาบถัดไป',
-      description: lessonRow < S.rows.length - 1
-        ? 'นำ WIP ก่อนคาบ บวกงานที่โหลดเข้าจริง แล้วหักงานที่ผ่าน QC ค่านี้จะกลายเป็น WIP ตั้งต้นของคาบถัดไป'
-        : 'คำนวณ WIP ที่เหลือหลังคาบสุดท้ายของวันนี้',
-      calculation: `${f(x.balBefore)} + ${f(x.load)} − ${f(x.qc)} = ${f(x.bal)} ชิ้น\n${lessonRow < S.rows.length - 1 ? `WIP ตั้งต้นของ ${S.rows[lessonRow + 1].l} = ${f(x.bal)} ชิ้น` : `WIP หลัง ${row.l} = ${f(x.bal)} ชิ้น`}`
+      title: t('lesson.balanceTitle'),
+      description: t(lessonRow < S.rows.length - 1 ? 'lesson.balanceDescNext' : 'lesson.balanceDescLast'),
+      calculation: lessonRow < S.rows.length - 1
+        ? t('lesson.balanceCalcNext', { balanceBefore: f(x.balBefore), load: f(x.load), qc: f(x.qc), balance: f(x.bal), next: S.rows[lessonRow + 1].l })
+        : t('lesson.balanceCalcLast', { balanceBefore: f(x.balBefore), load: f(x.load), qc: f(x.qc), balance: f(x.bal), period: row.l })
     }
   ];
   const step = steps[lessonStep];
-  $('#lessonProgress').textContent = `ขั้น ${lessonStep + 1} จาก ${steps.length} | คาบ ${row.l}`;
+  $('#lessonProgress').textContent = t('lesson.progress', { step: lessonStep + 1, total: steps.length, period: row.l });
   $('#lessonTitle').textContent = step.title;
   $('#lessonDescription').textContent = step.description;
   $('#lessonCalculation').textContent = step.calculation;
@@ -244,6 +363,7 @@ function update() {
   g('bal').textContent = f(T.bal);
   g('fn').innerHTML = `<div class="cellwrap"><span class="${T.fn > 0 && T.fn >= T.tgt ? 'pos' : ''}">${f(T.fn)}</span><small class="diff${T.fnDiff > 0 ? ' up' : ''}">${arrow(T.fnDiff)}</small></div>`;
   syncInputs();
+  syncValueSlider();
   paint(R);
   renderLesson(R);
 }
@@ -270,82 +390,63 @@ function paint(R) {
   $('#side').scrollTop = 0;
 }
 function explain(R, i, c) {
+  const t = window.WIP_I18N.t;
   if (i === -1) return explainSum(R, c);
   const x = R.rows[i], r = S.rows[i], lab = r.l;
-  const head = `<h2>${NAME[c]}</h2><div class="sub"><span class="tag">แถว ${lab}</span></div>`;
+  const head = `<h2>${t('metric.' + c)}</h2><div class="sub"><span class="tag">${t('explain.rowTag', { period: lab })}</span></div>`;
   if (c === 'tl') {
     const gap = Math.max(0, x.target - x.balBefore);
-    return head + `<div class="formula">TARGET LOAD = round( max(0, HOURLY TARGET − BALANCE ก่อนหน้า) × 1.25 )</div>
-    <div class="calc">BALANCE ก่อนหน้า = ${f(x.balBefore)} ${i === 0 ? '(Opening WIP)' : '(Balance ของแถวบน)'}
-HOURLY TARGET   = ${f(x.target)}
+    return head + `<div class="formula">${t('metric.tl')} = round( max(0, ${t('metric.tgt')} − ${t('explain.balanceBefore')}) × 1.25 )</div>
+    <div class="calc">${t('explain.balanceBefore')} = ${f(x.balBefore)} ${t(i === 0 ? 'explain.opening' : 'explain.previousRow')}
+${t('explain.hourlyTarget')} = ${f(x.target)}
 max(0, ${f(x.target)} − ${f(x.balBefore)}) = ${f(gap)}
-${f(gap)} × 1.25 = ${f(gap * 1.25)}  → ปัด = ${f(x.tl)}</div>
-    <div class="why"><b>ทำไมคิดแบบนี้:</b> ถ้างานที่ค้างในไลน์เย็บมากพอสำหรับเป้าชั่วโมงนี้แล้ว ก็ไม่ต้องโหลดเพิ่ม ถ้างานค้างไม่พอ ต้องโหลดส่วนที่ขาด และเผื่อไว้อีก 25% กันงานสะดุด</div>
-    ${x.tl === 0 ? '<div class="note">ตอนนี้เป็น 0 เพราะ Balance สูงกว่าเป้า ลองกดปุ่ม "LOAD = TARGET" เหนือตาราง แล้วดู ACTUAL LOAD เทียบกับ TARGET LOAD</div>' : ''}`;
+${f(gap)} × 1.25 = ${f(gap * 1.25)} → ${t('explain.roundedLoad')} = ${f(x.tl)}</div>
+    <div class="why">${t('explain.tlWhy')}</div>
+    ${x.tl === 0 ? `<div class="note">${t('explain.tlNote')}</div>` : ''}`;
   }
   if (c === 'load') {
     const lim = 1.25 * x.tl;
-    const why = x.loadCls === 'hi' ? `Load ${f(x.load)} มากกว่า 1.25 × Target Load (${f(lim)}) จึงเป็น <b>สีส้ม</b> คือโหลดมากกว่าที่ไลน์เย็บต้องการ` : x.loadCls === 'lo' ? `Load ${f(x.load)} น้อยกว่า Target Load ${f(x.tl)} จึงเป็น <b>สีฟ้า</b> คือโหลดไม่พอ` : 'Load อยู่ในช่วงที่ยอมรับได้ จึงเป็นสีขาว';
-    return head + `<div class="formula">ACTUAL LOAD = period_wip_line (server ส่งมา)</div>
-    <div class="calc">ค่าปัจจุบัน = ${f(x.load)}
-Target Load = ${f(x.tl)}   เกณฑ์สูง = 1.25 × ${f(x.tl)} = ${f(lim)}</div>
-    <div class="why">ช่องนี้เป็น <b>ข้อมูลนำเข้า</b> ไม่ได้คำนวณจากช่องอื่น ลองแก้ตัวเลขในช่องได้เลย แล้วดู Balance WIP ของแถวนี้และแถวล่างๆ ขยับตาม<br><br>${why}</div>`;
+    const why = x.loadCls === 'hi' ? t('explain.loadHigh') : x.loadCls === 'lo' ? t('explain.loadLow') : t('explain.loadNormal');
+    return head + `<div class="formula">${t('metric.load')} = period_wip_line</div>
+    <div class="calc">${f(x.load)} | ${t('metric.tl')} = ${f(x.tl)} | 1.25 × ${f(x.tl)} = ${f(lim)}</div>
+    <div class="why">${t('explain.loadInput')}<br><br>${why}</div>`;
   }
   if (c === 'tgt') {
     const first = i === 0;
-    return head + `<div class="formula">HOURLY TARGET = เป้าพื้นฐาน + ยอดเพิ่ม
-ยอดเพิ่ม = ยอดที่ขาดสะสม × นาทีของคาบนี้ ÷ นาทีที่เหลือ (รวมคาบนี้)
-ยอดที่ขาดสะสม = max(0, Σเป้าพื้นฐานคาบก่อนหน้า − ΣQC คาบก่อนหน้า)</div>
-    <ol class="steps">
-      <li>Σ เป้าพื้นฐานคาบก่อนหน้า = <b>${f(x.cumBBefore)}</b></li>
-      <li>Σ QC คาบก่อนหน้า = <b>${f(x.cumQBefore)}</b></li>
-      <li>ยอดที่ขาดสะสม = max(0, ${f(x.cumBBefore)} − ${f(x.cumQBefore)}) = <b>${f(x.shortfall)}</b></li>
-      <li>นาทีคาบนี้ = ${f(x.m)}, นาทีที่เหลือรวมคาบนี้ = ${f(x.remain)}</li>
-      <li>ยอดเพิ่ม = ${f(x.shortfall)} × ${f(x.m)} ÷ ${f(x.remain)} = ${x.raw.toFixed(2)} → ปัด = <b>${f(x.extra)}</b></li>
-      <li>HOURLY TARGET = ${f(x.b)} + ${f(x.extra)} = <b>${f(x.target)}</b></li>
-    </ol>
-    <div class="why"><b>ทำไมคิดแบบนี้:</b> ถ้าชั่วโมงก่อนทำได้ไม่ถึงเป้า ยอดที่ขาดต้องไปตามให้ทันภายในเวลาที่เหลือ ระบบจึงกระจายยอดที่ขาดตามสัดส่วนนาทีของแต่ละคาบ ยิ่งใกล้สิ้นวัน เวลาเหลือน้อย ยอดเพิ่มยิ่งสูง ${first ? '<br>แถวแรกยังไม่มีคาบก่อนหน้า จึงไม่มียอดเพิ่ม' : ''}</div>
-    `;
+    const calculation = t('lesson.targetCalc', {
+      baseBefore: f(x.cumBBefore), qcBefore: f(x.cumQBefore), shortfall: f(x.shortfall),
+      extraFormula: x.remain > 0 ? `round(${f(x.shortfall)} × ${f(x.m)} ÷ ${f(x.remain)}) = ${f(x.extra)}` : t('lesson.noTime'),
+      base: f(x.b), extra: f(x.extra), target: f(x.target)
+    });
+    return head + `<div class="formula">${t('explain.tgtWhy')}</div><div class="calc">${calculation}</div>${first ? `<div class="why">${t('explain.firstPeriod')}</div>` : ''}`;
   }
   if (c === 'qc') {
-    return head + `<div class="formula">QC PASS = QC Pass + Reprocess (period_qc_pass)
-ลูกศร = ΣQC สะสม − ΣHourly Target สะสม</div>
-    <div class="calc">QC แถวนี้ = ${f(x.qc)}
-ΣQC สะสมถึงแถวนี้ = ${f(x.cumQ)}
-ΣHourly Target สะสม = ${f(x.cumT)}
-ลูกศร = ${f(x.cumQ)} − ${f(x.cumT)} = ${f(x.qcDiff)}</div>
-    <div class="why"><b>อ่านลูกศร:</b> ${x.qcDiff < 0 ? `ติดลบ ${f(Math.abs(x.qcDiff))} หมายถึง ณ แถวนี้ QC สะสม <b>ต่ำกว่าเป้าสะสม</b> อยู่ ${f(Math.abs(x.qcDiff))} ชิ้น (สีแดง)` : x.qcDiff > 0 ? `บวก ${f(x.qcDiff)} หมายถึงเกินเป้าสะสม (สีเขียว)` : 'เท่ากับเป้าสะสมพอดี จึงไม่แสดงลูกศร'}<br>ตัวเลขหลักเป็นสีเขียวเมื่อ QC PASS มากกว่า HOURLY TARGET<br><br>ช่องนี้เป็นข้อมูลนำเข้า แก้แล้ว Balance WIP, ยอดเพิ่มของ Hourly Target และลูกศรของแถวล่างทั้งหมดจะขยับ</div>`;
+    const arrowMeaning = x.qcDiff < 0 ? t('explain.qcBehind', { amount: f(Math.abs(x.qcDiff)) }) : x.qcDiff > 0 ? t('explain.qcAhead', { amount: f(x.qcDiff) }) : t('explain.qcEqual');
+    return head + `<div class="formula">${t('metric.qc')} = period_qc_pass<br>${t('explain.qcArrow')} = Σ${t('metric.qc')} − Σ${t('metric.tgt')}</div>
+    <div class="calc">${t('metric.qc')} = ${f(x.qc)} | Σ${t('metric.qc')} = ${f(x.cumQ)} | Σ${t('metric.tgt')} = ${f(x.cumT)}<br>${arrowMeaning}</div>
+    <div class="why">${t('explain.qcGreen')}<br><br>${t('explain.qcInput')}</div>`;
   }
   if (c === 'bal') {
-    return head + `<div class="formula">BALANCE WIP = BALANCE ก่อนหน้า + ACTUAL LOAD − QC PASS</div>
-    <div class="calc">BALANCE ก่อนหน้า = ${f(x.balBefore)} ${i === 0 ? '(Opening WIP)' : ''}
-+ ACTUAL LOAD     = ${f(x.load)}
-− QC PASS         = ${f(x.qc)}
-= ${f(x.balBefore)} + ${f(x.load)} − ${f(x.qc)} = ${f(x.bal)}</div>
-    <div class="why"><b>ทำไมคิดแบบนี้:</b> Balance คืองานที่ค้างอยู่ในไลน์เย็บ งานเพิ่มเมื่อโหลดเข้า และลดลงเมื่อ QC ตรวจผ่านออกจากไลน์เย็บ แถวแรกเริ่มนับจากงานที่ค้างมาตั้งแต่เมื่อวาน (Opening WIP) ค่าแถวสุดท้ายจึงเท่ากับงานค้างในไลน์เย็บ ณ ปัจจุบัน</div>`;
+    return head + `<div class="formula">${t('metric.bal')} = ${t('explain.balanceBefore')} + ${t('metric.load')} − ${t('metric.qc')}</div>
+    <div class="calc">${f(x.balBefore)} + ${f(x.load)} − ${f(x.qc)} = ${f(x.bal)}</div>
+    <div class="why">${t('explain.balanceWhy')}</div>`;
   }
   if (c === 'fn') {
-    return head + `<div class="formula">SCAN BOX = period_fn_qty (server ส่งมา)
-ลูกศร = ΣScan สะสม − ΣHourly Target สะสม</div>
-    <div class="calc">Scan แถวนี้ = ${f(x.fn)}
-ΣScan สะสม = ${f(x.cumF)}
-ΣHourly Target สะสม = ${f(x.cumT)}
-ลูกศร = ${f(x.cumF)} − ${f(x.cumT)} = ${f(x.fnDiff)}</div>
-    <div class="why">ตัวเลขหลักเป็น<b>สีเขียว</b>เมื่อ Scan ของคาบเท่ากับหรือมากกว่า Hourly Target ${x.fn > 0 && x.fn >= x.target ? '(ตอนนี้เป็นเขียว)' : '(ตอนนี้ยังไม่ถึง)'}<br>ช่องนี้เป็นข้อมูลนำเข้า และ<b>ไม่ได้</b>ถูกนำไปคิด Balance WIP (Balance ใช้ QC PASS)</div>`;
+    return head + `<div class="formula">${t('metric.fn')} = period_fn_qty<br>${t('explain.qcArrow')} = Σ${t('metric.fn')} − Σ${t('metric.tgt')}</div>
+    <div class="calc">${t('metric.fn')} = ${f(x.fn)} | Σ${t('metric.fn')} = ${f(x.cumF)} | Σ${t('metric.tgt')} = ${f(x.cumT)}<br>${t('metric.fn')} − ${t('metric.tgt')} = ${f(x.fnDiff)}</div>
+    <div class="why">${t('explain.fnGreen')}<br><br>${t('explain.fnSeparate')}</div>`;
   }
 }
 function explainSum(R, c) {
-  const T = R.T, head = `<h2>Summary : ${NAME[c]}</h2><div class="sub"><span class="tag">แถวรวม</span></div>`;
+  const t = window.WIP_I18N.t;
+  const T = R.T, head = `<h2>${t('common.summary')}: ${t('metric.' + c)}</h2><div class="sub"><span class="tag">${t('explain.summaryTag')}</span></div>`;
   const list = k => R.rows.map(x => f(x[k])).join(' + ');
-  if (c === 'tl') return head + `<div class="formula">Σ ทุกแถว</div><div class="calc">${list('tl')} = ${f(T.tl)}</div>`;
-  if (c === 'load') return head + `<div class="formula">Σ ACTUAL LOAD ทุกแถว</div><div class="calc">${list('load')} = ${f(T.load)}</div><div class="why">สี: เทียบกับ 1.25 × ΣTarget Load (${f(1.25 * T.tl)}) ตอนนี้${T.loadCls === 'hi' ? 'สูงกว่า จึงเป็นสีส้ม' : T.loadCls === 'lo' ? 'ต่ำกว่า Target Load จึงเป็นสีฟ้า' : 'อยู่ในเกณฑ์'}</div>`;
-  if (c === 'tgt') return head + `<div class="formula">Σ HOURLY TARGET ทุกแถว</div><div class="calc">${list('target')} = ${f(T.tgt)}
-(เป้าพื้นฐาน ${f(T.b)} + ยอดเพิ่มรวม ${f(T.extra)})</div><div class="why">ยอดเพิ่มรวมคือเป้าที่ต้องตามเพิ่มเพราะ QC ตามหลังเป้าอยู่ ยิ่ง QC ต่ำ ยอดรวมนี้ยิ่งเกินเป้าต่อวันเดิม</div>`;
-  if (c === 'qc') return head + `<div class="formula">Σ QC ทุกแถว และลูกศร = ΣQC − ΣHourly Target</div><div class="calc">${list('qc')} = ${f(T.qc)}
-${f(T.qc)} − ${f(T.tgt)} = ${f(T.qcDiff)}</div>`;
-  if (c === 'bal') return head + `<div class="formula">ใช้ค่า BALANCE ของแถวสุดท้าย (ไม่ได้บวกรวม)</div><div class="calc">= ${f(T.bal)}</div><div class="why">เพราะ Balance เป็นยอดสะสมอยู่แล้ว การบวกรวมทุกแถวจะนับซ้ำ</div>`;
-  if (c === 'fn') return head + `<div class="formula">Σ SCAN BOX ทุกแถว และลูกศร = ΣScan − ΣHourly Target</div><div class="calc">${list('fn')} = ${f(T.fn)}
-${f(T.fn)} − ${f(T.tgt)} = ${f(T.fnDiff)}</div>`;
+  if (c === 'tl') return head + `<div class="formula">${t('explain.sumRows')}</div><div class="calc">${list('tl')} = ${f(T.tl)}</div>`;
+  if (c === 'load') return head + `<div class="formula">Σ ${t('metric.load')}</div><div class="calc">${list('load')} = ${f(T.load)}</div><div class="why">${t('explain.sumLoadColor', { limit: f(1.25 * T.tl), status: t(T.loadCls === 'hi' ? 'explain.statusHigh' : T.loadCls === 'lo' ? 'explain.statusLow' : 'explain.statusOk') })}</div>`;
+  if (c === 'tgt') return head + `<div class="formula">Σ ${t('metric.tgt')}</div><div class="calc">${list('target')} = ${f(T.tgt)}<br>${t('explain.sumTarget', { base: f(T.b), extra: f(T.extra) })}</div><div class="why">${t('explain.extraWhy')}</div>`;
+  if (c === 'qc') return head + `<div class="formula">Σ ${t('metric.qc')} | ${t('explain.qcArrow')} = Σ${t('metric.qc')} − Σ${t('metric.tgt')}</div><div class="calc">${list('qc')} = ${f(T.qc)}<br>${f(T.qc)} − ${f(T.tgt)} = ${f(T.qcDiff)}</div>`;
+  if (c === 'bal') return head + `<div class="formula">${t('explain.sumBalance')}</div><div class="calc">= ${f(T.bal)}</div>`;
+  if (c === 'fn') return head + `<div class="formula">Σ ${t('metric.fn')} | ${t('explain.qcArrow')} = Σ${t('metric.fn')} − Σ${t('metric.tgt')}</div><div class="calc">${list('fn')} = ${f(T.fn)}<br>${f(T.fn)} − ${f(T.tgt)} = ${f(T.fnDiff)}</div>`;
 }
 
 document.addEventListener('input', e => {
@@ -354,6 +455,7 @@ document.addEventListener('input', e => {
   if (t.id === 'targetPerHour') { updateShiftSettings(); return; }
   if (t.dataset && t.dataset.k) {
     S.rows[t.dataset.i][t.dataset.k] = N(t.value);
+    if (t.dataset.k === 'load') S.rows[t.dataset.i].loadEntered = t.value !== '';
     if (t.dataset.k === 'qc') S.rows[t.dataset.i].qcEntered = t.value !== '';
     if (t.dataset.k === 'fn') S.rows[t.dataset.i].fnEntered = t.value !== '';
     lessonRow = Number(t.dataset.i);
@@ -363,9 +465,16 @@ document.addEventListener('input', e => {
     update();
   }
 });
-$('#shiftStart').addEventListener('change', updateShiftSettings);
-$('#shiftEnd').addEventListener('change', updateShiftSettings);
+$('#shiftStart').addEventListener('change', () => updateShiftSettings(shiftStartPicker));
+$('#shiftEnd').addEventListener('change', () => updateShiftSettings(shiftEndPicker));
 $('#displayAllHours').addEventListener('change', update);
+$('#languageSelect').addEventListener('change', e => {
+  window.WIP_I18N.setLanguage(e.target.value);
+  update();
+});
+$$('input[name="theme"]').forEach(input => input.addEventListener('change', e => {
+  if (e.target.checked) window.WIP_I18N.setTheme(e.target.value);
+}));
 function pick(e) {
   const c = e.target.closest('td[data-c]');
   if (c) {
@@ -381,8 +490,52 @@ function pick(e) {
   }
 }
 document.addEventListener('click', pick);
-document.addEventListener('focusin', pick);
+document.addEventListener('click', e => {
+  const input = e.target.closest('input.cell[data-k]');
+  if (input) {
+    if (suppressedValueSliderFocus === input) suppressedValueSliderFocus = null;
+    openValueSlider(input);
+  } else if (!$('#valueSliderPopover').contains(e.target)) {
+    closeValueSlider();
+  }
+});
+document.addEventListener('focusin', e => {
+  pick(e);
+  const input = e.target.closest('input.cell[data-k]');
+  if (input) {
+    if (suppressedValueSliderFocus === input) {
+      suppressedValueSliderFocus = null;
+      return;
+    }
+    openValueSlider(input);
+  } else if (!$('#valueSliderPopover').contains(e.target)) {
+    closeValueSlider();
+  }
+});
+$('#valueSlider').addEventListener('input', e => {
+  if (!activeValueInput) return;
+  activeValueInput.value = e.target.value;
+  activeValueInput.dispatchEvent(new Event('input', { bubbles: true }));
+});
+$('#valueSliderMax').addEventListener('input', e => {
+  const max = Number(e.target.value);
+  if (!Number.isFinite(max) || max < 1) return;
+  valueSliderLimit = Math.min(1000000, Math.floor(max));
+  syncValueSlider();
+});
+$('#valueSliderMax').addEventListener('change', e => {
+  const max = Number(e.target.value);
+  valueSliderLimit = Number.isFinite(max) ? Math.min(1000000, Math.max(1, Math.floor(max))) : 200;
+  e.target.value = String(valueSliderLimit);
+  syncValueSlider();
+});
+document.addEventListener('scroll', positionValueSlider, true);
+window.addEventListener('resize', positionValueSlider);
 document.addEventListener('keydown', e => {
+  if (e.key === 'Escape' && activeValueInput) {
+    closeValueSlider(true);
+    return;
+  }
   const settingsMenu = $('.settings-menu');
   if (e.key === 'Escape' && settingsMenu.open) {
     settingsMenu.open = false;
@@ -414,9 +567,10 @@ function applyScenarioSelection() {
   if (activeScenarios.has('bLoadTarget')) {
     for (let i = 0; i < S.rows.length; i++) {
       S.rows[i].load = calc().rows[i].tl;
+      S.rows[i].loadEntered = true;
     }
   }
-  if (activeScenarios.has('bLoadZero')) S.rows.forEach(row => row.load = 0);
+  if (activeScenarios.has('bLoadZero')) S.rows.forEach(row => { row.load = 0; row.loadEntered = true; });
   updateScenarioButtons();
   update();
 }
@@ -478,7 +632,27 @@ function toggleScenario(scenarioId) {
 ['bReset', 'bLoadTarget', 'bQcTarget', 'bFnTarget'].forEach(id => {
   $('#' + id).onclick = () => toggleScenario(id);
 });
-$('#bRefresh').onclick = () => window.location.reload();
+$('#bRefresh').onclick = () => {
+  demoSnapshot = null;
+  activeScenarios.clear();
+  activeScenarios.add('bAllZero');
+  S = JSON.parse(JSON.stringify(scenarioBase));
+  S.rows.forEach(row => {
+    row.load = 0;
+    row.loadEntered = false;
+    row.qc = 0;
+    row.fn = 0;
+    row.qcEntered = false;
+    row.fnEntered = false;
+  });
+  scenarioBase = JSON.parse(JSON.stringify(S));
+  sel = { i: 0, c: 'tgt' };
+  lessonRow = 0;
+  lessonStep = 1;
+  $('#lessonPeriod').value = '0';
+  updateScenarioButtons();
+  update();
+};
 $('#lessonPeriod').addEventListener('change', e => {
   lessonRow = Number(e.target.value);
   selectLessonCell(calc());
@@ -511,7 +685,6 @@ const syncSideHeight = () => {
   const sideRect = sidePanel.getBoundingClientRect();
   sidePanel.style.height = `${tableCard.getBoundingClientRect().height}px`;
   settingsPanel.style.width = `${sideRect.width}px`;
-  settingsPanel.style.height = `${sideRect.height}px`;
 };
 if ('ResizeObserver' in window) {
   const sideHeightObserver = new ResizeObserver(syncSideHeight);

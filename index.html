@@ -1,74 +1,102 @@
 ﻿<!doctype html>
-<html lang="th">
+<html lang="th" data-theme="light">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>สื่อการสอน: WIP Control Monitoring</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr@4.6.13/dist/flatpickr.min.css">
 <link rel="stylesheet" href="spf-hourly.css">
 </head>
 <body>
 <header>
-  <h1>ตาราง WIP Control Monitoring ทำงานอย่างไร</h1>
-  <details class="settings-menu">
-    <summary class="settings-toggle" title="ตั้งค่า" aria-label="ตั้งค่า"><span aria-hidden="true">&#9881;</span></summary>
-    <div class="settings-panel">
-      <div class="settings-heading">
-        <h2>ค่าเริ่มต้น</h2>
-        <label class="display-toggle" data-setting="displayMode" for="displayAllHours">
-          <span>แสดงทุกชั่วโมง</span>
-          <input id="displayAllHours" type="checkbox">
-          <span class="display-switch" aria-hidden="true"></span>
-        </label>
+  <h1 data-i18n="page.title">ตาราง WIP Control Monitoring ทำงานอย่างไร</h1>
+  <div class="header-controls">
+    <label class="language-control" for="languageSelect">
+      <select id="languageSelect" aria-label="ภาษา" data-i18n-aria="settings.language"><option value="th">ไทย</option><option value="en">English</option><option value="vi">Tiếng Việt</option><option value="lo">ລາວ</option></select>
+    </label>
+    <fieldset class="theme-switcher">
+      <legend class="visually-hidden" data-i18n="settings.theme">ธีม</legend>
+      <label title="โหมดสว่าง" data-i18n-title="theme.lightMode">
+        <input type="radio" name="theme" value="light" aria-label="โหมดสว่าง" data-i18n-aria="theme.lightMode">
+        <span aria-hidden="true">☀</span>
+      </label>
+      <label title="โหมดมืด" data-i18n-title="theme.darkMode">
+        <input type="radio" name="theme" value="dark" aria-label="โหมดมืด" data-i18n-aria="theme.darkMode">
+        <span aria-hidden="true">☾</span>
+      </label>
+    </fieldset>
+    <details class="settings-menu">
+      <summary class="settings-toggle" title="ตั้งค่า" aria-label="ตั้งค่า" data-i18n-title="settings.open" data-i18n-aria="settings.open"><span aria-hidden="true">&#9881;</span></summary>
+      <div class="settings-panel">
+        <div class="settings-heading">
+          <h2 data-i18n="settings.title">ค่าเริ่มต้น</h2>
+          <label class="display-toggle" data-setting="displayMode" for="displayAllHours">
+            <span data-i18n="display.allHours">แสดงทุกชั่วโมง</span>
+            <input id="displayAllHours" type="checkbox">
+            <span class="display-switch" aria-hidden="true"></span>
+          </label>
+        </div>
+        <div class="settings-fields">
+          <label class="setting-field"><span data-i18n="settings.wip">WIP เริ่มต้น</span><input id="open" class="opening-input" type="number" min="0"></label>
+          <label class="setting-field" data-setting="targetPerHour" for="targetPerHour"><span data-i18n="settings.hourlyTarget">เป้าหมายต่อชั่วโมง</span><input id="targetPerHour" class="opening-input" type="number" min="0" step="1" value="75"></label>
+          <label class="setting-field" data-setting="shiftStart"><span data-i18n="settings.shiftStart">เวลาเริ่มงาน</span><input id="shiftStart" class="time-input" type="text" value="8:00 AM" readonly aria-describedby="shiftError" aria-invalid="false"></label>
+          <label class="setting-field" data-setting="shiftEnd"><span data-i18n="settings.shiftEnd">เวลาเลิกงาน</span><input id="shiftEnd" class="time-input" type="text" value="5:00 PM" readonly aria-describedby="shiftError" aria-invalid="false"></label>
+        </div>
+        <p id="shiftError" class="setting-error" role="alert" hidden data-i18n="settings.shiftError">เวลาเลิกงานต้องอยู่หลังเวลาเริ่มงาน และอยู่ในช่วง 08:00–20:00</p>
+        <table class="set" id="set">
+          <thead><tr><th scope="col" data-i18n="schedule.period">ช่วงเวลา</th><th scope="col" data-i18n="schedule.minutes">นาทีทำงาน</th><th scope="col" data-i18n="schedule.baseTarget">เป้าพื้นฐาน</th></tr></thead>
+          <tbody id="setRows"></tbody>
+          <tfoot><tr><th scope="row" data-i18n="common.total">รวม</th><td id="setMinutesTotal"></td><td id="setBaseTotal"></td></tr></tfoot>
+        </table>
       </div>
-      <div class="settings-fields">
-        <label class="setting-field"><span>WIP เริ่มต้น</span><input id="open" class="opening-input" type="number" min="0"></label>
-        <label class="setting-field" data-setting="targetPerHour" for="targetPerHour">เป้าหมายต่อชั่วโมง<input id="targetPerHour" class="opening-input" type="number" min="0" step="1" value="75"></label>
-        <label class="setting-field" data-setting="shiftStart">เวลาเริ่มงาน<input id="shiftStart" class="time-input" type="text" autocomplete="off" maxlength="5" pattern="(08|09|10|11|12|13|14|15|16|17|18|19):00" placeholder="HH:00" value="08:00" aria-describedby="shiftError"></label>
-        <label class="setting-field" data-setting="shiftEnd">เวลาเลิกงาน<input id="shiftEnd" class="time-input" type="text" autocomplete="off" maxlength="5" pattern="(09|10|11|12|13|14|15|16|17|18|19|20):00" placeholder="HH:00" value="17:00" aria-describedby="shiftError"></label>
-      </div>
-      <p id="shiftError" class="setting-error" role="alert" hidden>เวลาเลิกงานต้องอยู่หลังเวลาเริ่มงาน และอยู่ในช่วง 08:00–20:00</p>
-      <table class="set" id="set">
-        <thead><tr><th scope="col">ช่วงเวลา</th><th scope="col">นาทีทำงาน</th><th scope="col">เป้าพื้นฐาน</th></tr></thead>
-        <tbody id="setRows"></tbody>
-        <tfoot><tr><th scope="row">รวม</th><td id="setMinutesTotal"></td><td id="setBaseTotal"></td></tr></tfoot>
-      </table>
-    </div>
-  </details>
+    </details>
+  </div>
 </header>
  
 <div class="wrap">
   <div class="toolbar">
-    <button id="bReset" class="scenario-button" aria-pressed="false">ใช้ข้อมูล Demo</button>
-    <button id="bLoadTarget" class="scenario-button" aria-pressed="false">LOAD = TARGET</button>
-    <button id="bQcTarget" class="scenario-button" aria-pressed="false">QC PASS = TARGET</button>
-    <button id="bFnTarget" class="scenario-button" aria-pressed="false">SCAN BOX = TARGET</button>
-    <button id="bRefresh" class="scenario-button">รีเซ็ต</button>
+    <button id="bReset" class="scenario-button" aria-pressed="false" data-i18n="button.demo">ใช้ข้อมูล Demo</button>
+    <button id="bLoadTarget" class="scenario-button" aria-pressed="false" data-i18n="button.loadTarget">LOAD = TARGET</button>
+    <button id="bQcTarget" class="scenario-button" aria-pressed="false" data-i18n="button.qcTarget">QC PASS = TARGET</button>
+    <button id="bFnTarget" class="scenario-button" aria-pressed="false" data-i18n="button.fnTarget">SCAN BOX = TARGET</button>
+    <button id="bRefresh" class="scenario-button" data-i18n="button.refresh">รีเซ็ต</button>
   </div>
   <div>
     <div class="tblcard">
       <table class="spf" id="tbl">
         <colgroup><col><col><col><col><col><col><col></colgroup>
-        <thead><tr><th>Hourly Output</th><th>TARGET LOAD</th><th>ACTUAL LOAD</th><th>HOURLY TARGET</th><th>QC PASS</th><th>BALANCE WIP</th><th>SCAN BOX</th></tr></thead>
+        <thead><tr><th data-i18n="metric.hourlyOutput">Hourly Output</th><th data-i18n="metric.tl">TARGET LOAD</th><th data-i18n="metric.load">ACTUAL LOAD</th><th data-i18n="metric.tgt">HOURLY TARGET</th><th data-i18n="metric.qc">QC PASS</th><th data-i18n="metric.bal">BALANCE WIP</th><th data-i18n="metric.fn">SCAN BOX</th></tr></thead>
         <tbody id="tb"></tbody>
         <tfoot><tr>
-          <th>Summary</th>
+          <th data-i18n="common.summary">Summary</th>
           <td data-i="-1" data-c="tl"></td><td data-i="-1" data-c="load"></td><td data-i="-1" data-c="tgt"></td>
           <td data-i="-1" data-c="qc"></td><td data-i="-1" data-c="bal"></td><td data-i="-1" data-c="fn"></td>
         </tr></tfoot>
       </table>
     </div>
   </div>
+  <div id="valueSliderPopover" class="value-slider-popover" role="group" hidden>
+    <div class="value-slider-heading">
+      <span id="valueSliderLabel"></span>
+      <output id="valueSliderOutput">0</output>
+    </div>
+    <input id="valueSlider" class="value-range" type="range" min="0" max="200" step="1" aria-label="Adjust value">
+    <div class="value-slider-scale">
+      <span>0</span>
+      <label class="value-slider-max-control"><span data-i18n="common.max">สูงสุด</span><input id="valueSliderMax" type="number" min="1" max="1000000" step="1" value="200" aria-label="สูงสุด" data-i18n-aria="common.max"></label>
+    </div>
+  </div>
  
   <aside class="side" id="side">
     <div id="selectedExplanation" aria-live="polite"></div>
-    <section class="formula-summary" aria-label="สรุปสูตรการคำนวณ">
-      <article class="formula-summary-item" data-formula="tl">
+    <section class="formula-summary" aria-label="สรุปสูตรการคำนวณ" data-i18n-aria="formula.summaryLabel">
+      <article class="formula-summary-item" data-formula="tl" data-i18n-html="formula.tl">
         <h3>TARGET LOAD (จำนวนงานที่ควรโหลด)</h3>
         <p>ชั่วโมงนี้ควรป้อนงานเข้าไลน์เย็บอีกเท่าไร</p>
-        <p><b>คิดจาก:</b> เป้าของชั่วโมงนี้ลบงานที่ค้างในไลน์เย็บ ถ้าได้ผลบวกให้ป้อนเพิ่มตามส่วนที่ขาด แล้วเผื่ออีก 25% เพื่อกันงานขาดมือ ถ้างานค้างมากกว่าเป้าแล้วไม่ต้องป้อนเพิ่ม</p>
-        <p><b>ตัวอย่าง:</b> เป้า 75 แต่งานค้าง 229 จึงไม่ต้องป้อนเพิ่ม = 0 ถ้าเริ่มวันด้วยงานค้าง 0 ไลน์เย็บควรได้รับ 75 × 1.25 = 93.75 หรือประมาณ 94 ชิ้น</p>
+        <p><b>คิดจาก:</b> เป้าของชั่วโมงนี้ลบงานที่ค้างในสายอยู่แล้ว ถ้าได้ผลบวกให้ป้อนเพิ่มตามส่วนที่ขาด แล้วเผื่ออีก 25% เพื่อกันงานขาดมือ ถ้างานค้างมากกว่าเป้าแล้วไม่ต้องป้อนเพิ่ม (เป็น 0)</p>
+        <p><b>ตัวอย่าง:</b> เป้า 75 แต่งานค้าง 229 จึงไม่ต้องป้อนเพิ่ม = 0 ถ้าเริ่มวันด้วยงานค้าง 0 สายควรได้รับ 75 × 1.25 = 93.75 หรือประมาณ 94 ชิ้น</p>
       </article>
-      <article class="formula-summary-item" data-formula="load">
+      <article class="formula-summary-item" data-formula="load" data-i18n-html="formula.load">
         <h3>ACTUAL LOAD (งานที่ป้อนเข้า/งานที่โหลดเข้า)</h3>
         <p>จำนวนงานที่ถูกโหลดเข้าไลน์เย็บในชั่วโมงนั้น ระบบหลังบ้านนับให้ หน้าจอแค่แสดงผล</p>
         <p><b>สีบอกว่าป้อนงานพอดีไหม</b> โดยเทียบกับ TARGET LOAD (จำนวนที่ไลน์เย็บควรได้รับ)</p>
@@ -77,15 +105,15 @@
           <li><span class="lo"><b>ฟ้า</b></span> = ป้อนงานน้อยกว่าที่สายควรได้</li>
           <li>ขาว = อยู่ในช่วงที่ยอมรับได้</li>
         </ul>
-        <p><b>ตัวอย่าง:</b> ถ้างานค้างในไลน์เย็บเยอะอยู่แล้ว ช่อง TARGET LOAD จะเป็น 0 ถ้ายังป้อนงานเพิ่ม ช่องนี้จะเป็นสีส้ม</p>
+        <p><b>ตัวอย่าง:</b> ถ้างานค้างในสายเยอะอยู่แล้ว ช่อง TARGET LOAD จะเป็น 0 ถ้ายังป้อนงานเพิ่ม ช่องนี้จะเป็นสีส้ม</p>
       </article>
-      <article class="formula-summary-item" data-formula="tgt">
+      <article class="formula-summary-item" data-formula="tgt" data-i18n-html="formula.tgt">
         <h3>HOURLY TARGET (เป้าของชั่วโมงนั้น)</h3>
         <p>เป้าปกติของชั่วโมงนั้น <b>บวกยอดที่ต้องไล่ตามให้ทัน</b></p>
         <p>ถ้าชั่วโมงก่อนๆ ทำได้ไม่ถึงเป้า ยอดที่ขาดจะถูกแบ่งไปเพิ่มในชั่วโมงที่เหลือของวัน โดยแบ่งตามเวลาทำงานที่เหลือ</p>
-        <p><b>ตัวอย่าง:</b> ชั่วโมงแรกเป้า 75 ทำ QC ได้ 25 ขาดไป 50 เหลือเวลาทำงาน 7 ชั่วโมง ชั่วโมงที่สองจึงรับยอดเพิ่มประมาณ 7 ชิ้น เป้าเป็น 75 + 7 = 82 ยิ่งใกล้เลิกงาน เวลาเหลือน้อย ยอดที่ต้องไล่ตามยิ่งสูง</p>
+        <p><b>ตัวอย่าง:</b> ชั่วโมงแรกเป้า 75 ทำ QC ได้ 25 ขาดไป 50 เหลือเวลาทำงาน 7 ชั่วโมง ชั่วโมงที่สองจึงรับยอดเพิ่มประมาณ 7 ชิ้น เป้าเป็น 75 + 7 = 82 ยิ่งใกล้เลิกงาน เวลาเหลือน้อย ยอดที่ต้องไล่ตามยิ่งสูง ชั่วโมงสุดท้ายเป้าจึงพุ่งเป็น 264</p>
       </article>
-      <article class="formula-summary-item" data-formula="qc">
+      <article class="formula-summary-item" data-formula="qc" data-i18n-html="formula.qc">
         <h3>QC PASS (งานที่ตรวจผ่าน)</h3>
         <p>จำนวนงานที่ผ่านการตรวจคุณภาพในชั่วโมงนั้น นับรวมงานที่แก้แล้วกลับมาผ่านด้วย</p>
         <p><b>ลูกศรเล็กข้างตัวเลขคือยอดที่ตามหลัง/นำเป้าสะสม</b> คิดจากผลรวม QC ที่ทำได้ตั้งแต่เริ่มวัน ลบผลรวมเป้าตั้งแต่เริ่มวัน</p>
@@ -96,15 +124,15 @@
         </ul>
         <p><b>ตัวอย่าง:</b> ถึงชั่วโมง 10:00-11:00 ทำ QC สะสมได้ 115 ชิ้น แต่เป้าสะสม 245 ชิ้น จึงแสดง ↓130</p>
       </article>
-      <article class="formula-summary-item" data-formula="bal">
-        <h3>BALANCE WIP (งานค้างในไลน์เย็บ)</h3>
-        <p>งานที่ยังอยู่ในไลน์เย็บ ยังไม่ผ่าน QC ออกไป</p>
+      <article class="formula-summary-item" data-formula="bal" data-i18n-html="formula.bal">
+        <h3>BALANCE WIP (งานค้างในสาย)</h3>
+        <p>งานที่ยังอยู่ในสายเย็บ ยังไม่ผ่าน QC ออกไป</p>
         <p><b>งานค้างตอนนี้ = งานค้างชั่วโมงก่อน + งานที่ป้อนเข้าใหม่ − งานที่ผ่าน QC ออกไป</b></p>
         <p><b>ตัวอย่าง:</b> เริ่มวันมีงานค้าง 172 ชั่วโมงแรกป้อนเข้า 82 ผ่าน QC 25 งานค้างจึงเป็น 172 + 82 − 25 = <b>229</b> แล้วใช้ 229 เป็นจุดเริ่มของชั่วโมงถัดไป</p>
       </article>
-      <article class="formula-summary-item" data-formula="fn">
-        <h3>SCAN BOX (งานที่สแกนลงกล่องแล้ว)</h3>
-        <p>จำนวนงานที่สแกนลงกล่อง/ส่งต่อในชั่วโมงนั้น</p>
+      <article class="formula-summary-item" data-formula="fn" data-i18n-html="formula.fn">
+        <h3>SCAN BOX (งานที่สแกนกล่องแล้ว)</h3>
+        <p>จำนวนงานที่สแกนกล่อง/ส่งต่อในชั่วโมงนั้น</p>
         <ul>
           <li>ตัวเลขเป็น <b>สีเขียว</b> เมื่อสแกนได้มากกว่า 0 และถึงเป้าของชั่วโมงนั้น</li>
           <li>ลูกศรอ่านแบบเดียวกับ QC PASS คือผลรวมสแกนสะสมเทียบกับเป้าสะสม</li>
@@ -116,21 +144,21 @@
 </div>
  
 <section class="lower">
-  <h2>ตรรกะการคำนวณ</h2>
+  <h2 data-i18n="lesson.heading">ลำดับการคำนวณ</h2>
   <div class="lesson" id="lesson">
     <div class="lesson-controls">
-      <label for="lessonPeriod">เลือกคาบ
+      <label for="lessonPeriod"><span data-i18n="lesson.choosePeriod">เลือกคาบ</span>
         <select id="lessonPeriod"></select>
       </label>
       <p id="lessonProgress" class="lesson-progress"></p>
     </div>
     <div class="lesson-steps" aria-label="ขั้นตอนการคำนวณ">
-      <button type="button" class="lesson-step" data-lesson-step="0" aria-current="step">1. WIP ตั้งต้น</button>
-      <button type="button" class="lesson-step" data-lesson-step="1">2. เป้าชั่วโมง</button>
-      <button type="button" class="lesson-step" data-lesson-step="2">3. ควรโหลด</button>
-      <button type="button" class="lesson-step" data-lesson-step="3">4. โหลดจริง</button>
-      <button type="button" class="lesson-step" data-lesson-step="4">5. QC ผ่าน</button>
-      <button type="button" class="lesson-step" data-lesson-step="5">6. WIP คงเหลือ</button>
+      <button type="button" class="lesson-step" data-lesson-step="0" aria-current="step" data-i18n="lesson.step0">1. WIP ตั้งต้น</button>
+      <button type="button" class="lesson-step" data-lesson-step="1" data-i18n="lesson.step1">2. เป้าชั่วโมง</button>
+      <button type="button" class="lesson-step" data-lesson-step="2" data-i18n="lesson.step2">3. ควรโหลด</button>
+      <button type="button" class="lesson-step" data-lesson-step="3" data-i18n="lesson.step3">4. โหลดจริง</button>
+      <button type="button" class="lesson-step" data-lesson-step="4" data-i18n="lesson.step4">5. QC ผ่าน</button>
+      <button type="button" class="lesson-step" data-lesson-step="5" data-i18n="lesson.step5">6. WIP คงเหลือ</button>
     </div>
     <div class="lesson-view" aria-live="polite">
       <h3 id="lessonTitle"></h3>
@@ -138,14 +166,16 @@
       <pre id="lessonCalculation" class="lesson-calculation"></pre>
     </div>
     <div class="lesson-navigation">
-      <button type="button" id="lessonPrev">ก่อนหน้า</button>
-      <button type="button" id="lessonNext">ขั้นถัดไป</button>
+      <button type="button" id="lessonPrev" data-i18n="lesson.previous">ก่อนหน้า</button>
+      <button type="button" id="lessonNext" data-i18n="lesson.next">ขั้นถัดไป</button>
     </div>
   </div>
  
 </section>
  
 <script src="demo-data.js"></script>
+<script src="i18n"></script>
+<script src="https://cdn.jsdelivr.net/npm/flatpickr@4.6.13"></script>
 <script src="spf-hourly.js"></script>
 </body>
 </html>

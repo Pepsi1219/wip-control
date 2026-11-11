@@ -60,14 +60,14 @@
 </header>
  
 <div class="wrap">
-  <div class="toolbar">
+  <div class="toolbar side-actions">
     <button id="bReset" class="scenario-button" aria-pressed="false" data-i18n="button.demo">ใช้ข้อมูล Demo</button>
     <button id="bLoadTarget" class="scenario-button" aria-pressed="false" data-i18n="button.loadTarget">LOAD = TARGET</button>
     <button id="bQcTarget" class="scenario-button" aria-pressed="false" data-i18n="button.qcTarget">QC PASS = TARGET</button>
     <button id="bFnTarget" class="scenario-button" aria-pressed="false" data-i18n="button.fnTarget">SCAN BOX = TARGET</button>
-    <button id="bRefresh" class="scenario-button" data-i18n="button.refresh">รีเซ็ต</button>
+    <button id="bRefresh" class="scenario-button reset-button" aria-label="รีเซ็ต" title="รีเซ็ต" data-i18n-aria="button.refresh" data-i18n-title="button.refresh">&#8635;</button>
   </div>
-  <div>
+  <div class="table-column">
     <div class="tblcard">
       <table class="spf" id="tbl">
         <colgroup><col><col><col><col><col><col><col></colgroup>
@@ -137,7 +137,7 @@
   </aside>
 </div>
  
-<section class="lower">
+<section class="lower" hidden>
   <h2 data-i18n="lesson.heading">ลำดับการคำนวณ</h2>
   <div class="lesson" id="lesson">
     <div class="lesson-controls">

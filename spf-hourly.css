@@ -17,11 +17,14 @@ header p{margin:4px 0 0;color:var(--mut);font-size:14px}
 .theme-switcher input:checked+span{background:#29436e;color:var(--cyan)}
 .theme-switcher input:focus-visible+span{outline:2px solid var(--cyan);outline-offset:2px}
 .visually-hidden{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
-.wrap{display:grid;grid-template-columns:minmax(0,1.55fr) minmax(320px,1fr);column-gap:20px;row-gap:8px;padding:16px 28px 12px;align-items:start}
+.wrap{display:grid;grid-template-columns:minmax(0,1.55fr) minmax(320px,1fr);column-gap:20px;row-gap:8px;padding:16px 28px 12px;align-items:stretch}
 @media(max-width:1000px){.wrap{grid-template-columns:1fr}}
 .toolbar{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:0;align-items:center}
-.wrap>.toolbar{grid-column:1/-1}
+.table-column{display:flex;min-width:0}
+.side-actions{display:grid;grid-column:2;grid-template-columns:repeat(4,minmax(0,1fr)) 32px;gap:5px}
 .toolbar button{background:#1c2a4d;color:var(--txt);border:1px solid #33446d;border-radius:8px;padding:5px 10px;font-size:12px;cursor:pointer}
+.side-actions button{min-width:0;min-height:34px;padding:4px 2px;font-size:10px;line-height:1.15;text-align:center;white-space:normal;overflow-wrap:anywhere}
+.side-actions .reset-button{grid-column:5;grid-row:1;width:32px;height:32px;padding:0;font-size:20px;line-height:1}
 .toolbar button:hover{background:#25376a}
 .toolbar button[aria-pressed="true"]{background:#29436e;border-color:var(--cyan);box-shadow:inset 0 0 0 1px var(--cyan);color:#fff}
 .toolbar label{font-size:13px;color:var(--mut);display:flex;gap:6px;align-items:center;margin-left:auto}
@@ -49,21 +52,21 @@ header p{margin:4px 0 0;color:var(--mut);font-size:14px}
 .display-toggle input:checked+.display-switch::before{transform:translateX(16px);background:#fff}
 .display-toggle input:focus-visible+.display-switch{outline:2px solid var(--cyan);outline-offset:2px}
 .settings-panel .setting-error{color:var(--red)}
-.tblcard{background:var(--tbl);border-radius:14px;border:3px solid #6b7488;padding:6px 12px 10px}
-table.spf{width:100%;border-collapse:collapse;table-layout:fixed;color:#fff}
+.tblcard{display:flex;flex:1;background:var(--tbl);border-radius:14px;border:3px solid #6b7488;padding:4px 12px 8px}
+table.spf{width:100%;height:100%;border-collapse:collapse;table-layout:fixed;color:#fff}
 table.spf col:nth-child(1){width:17%}
 table.spf col:nth-child(n+2){width:13.833333%}
 table.spf th,table.spf td{text-align:center;padding:0;font-weight:400;position:relative}
 table.spf thead th{color:#c5cbd6;font-weight:700;font-size:13px;letter-spacing:.2px;padding:12px 2px 10px;border-bottom:1px solid #3a4258;text-transform:uppercase}
 table.spf thead th:first-child{color:var(--cyan);text-transform:none;font-size:14px}
-table.spf tbody tr{height:62px;border-bottom:1px solid #2a3347}
+table.spf tbody tr{height:60px;border-bottom:1px solid #2a3347}
 table.spf tbody tr.row-pending{visibility:hidden}
 table.spf tbody th{font-size:17px}
 table.spf td{font-size:17px}
 table.spf tfoot tr{height:10px;background:#101827}
 table.spf tfoot th{color:#2fc0f0;font-weight:700;font-size:19px}
 table.spf tfoot td{font-size:19px}
-.cellwrap{position:relative;display:flex;justify-content:center;align-items:center;gap:5px;min-height:50px;padding:2px 0}
+.cellwrap{position:relative;display:flex;justify-content:center;align-items:center;gap:5px;min-height:46px;padding:2px 0}
 input.cell{width:3.6ch;min-width:3.6ch;background:transparent;border:0;border-bottom:1px dashed transparent;color:inherit;font:inherit;text-align:center;padding:0;outline:0;appearance:textfield;-moz-appearance:textfield}
 input.cell::-webkit-outer-spin-button,input.cell::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
 input.cell.w5{width:4.4ch}
@@ -85,7 +88,7 @@ small.diff.up{color:var(--green)}
 td.sel,th.sel{outline:2px solid var(--cyan);outline-offset:-3px;background:rgba(47,181,240,.10)}
 td.dep{background:rgba(255,212,0,.14);outline:1px dashed #b89b00;outline-offset:-3px}
 td[data-c]{cursor:pointer}
-.side{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:16px 18px;overflow:auto;scrollbar-width:none;-ms-overflow-style:none}
+.side{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:12px 16px;overflow:auto;scrollbar-width:none;-ms-overflow-style:none}
 .side::-webkit-scrollbar{display:none}
 .side h2{margin:0 0 4px;font-size:17px;color:var(--cyan)}
 .side .sub{color:var(--mut);font-size:13px;margin-bottom:10px}
@@ -178,5 +181,5 @@ select.time-input{cursor:pointer}
 [data-theme="light"] .lesson-step[aria-current="step"]{border-color:#c7d2dc}
 [data-theme="light"] code{background:#edf1f4;color:#273640}
 @media(max-width:850px){.lesson-steps{grid-template-columns:repeat(3,minmax(0,1fr))}}
-@media(max-width:560px){header{flex-direction:column;gap:14px}.header-controls{width:100%;justify-content:space-between;flex-wrap:wrap}.settings-heading{align-items:flex-start;flex-direction:column}.settings-tools{width:100%;justify-content:space-between;flex-wrap:wrap;gap:10px}.settings-fields{grid-template-columns:1fr}.lesson-controls{align-items:flex-start;flex-direction:column}.lesson-steps{grid-template-columns:repeat(2,minmax(0,1fr))}.lesson-step{border-bottom:1px solid var(--line);border-radius:6px}.lesson-view{min-height:0}}
+@media(max-width:560px){header{flex-direction:column;gap:14px}.header-controls{width:100%;justify-content:space-between;flex-wrap:wrap}.settings-heading{align-items:flex-start;flex-direction:column}.settings-tools{width:100%;justify-content:space-between;flex-wrap:wrap;gap:10px}.settings-fields{grid-template-columns:1fr}.lesson-controls{align-items:flex-start;flex-direction:column}.lesson-steps{grid-template-columns:repeat(2,minmax(0,1fr))}.lesson-step{border-bottom:1px solid var(--line);border-radius:6px}.lesson-view{min-height:0}.side-actions{grid-template-columns:repeat(2,minmax(0,1fr)) 32px}.side-actions .reset-button{grid-column:3;grid-row:1}}
 code{background:#0a1226;padding:1px 6px;border-radius:4px;font-size:13px;color:#d6e4ff}

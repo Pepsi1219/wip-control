@@ -43,8 +43,6 @@
           </div>
         </div>
         <div class="settings-fields">
-          <label class="setting-field"><span data-i18n="settings.wip">WIP เริ่มต้น</span><input id="open" class="opening-input" type="number" min="0"></label>
-          <label class="setting-field" data-setting="targetPerHour" for="targetPerHour"><span data-i18n="settings.hourlyTarget">เป้าหมายต่อชั่วโมง</span><input id="targetPerHour" class="opening-input" type="number" min="0" step="1" value="75"></label>
           <label class="setting-field" data-setting="shiftStart"><span data-i18n="settings.shiftStart">เวลาเริ่มงาน</span><input id="shiftStart" class="time-input" type="text" value="8:00 AM" readonly aria-describedby="shiftError" aria-invalid="false"></label>
           <label class="setting-field" data-setting="shiftEnd"><span data-i18n="settings.shiftEnd">เวลาเลิกงาน</span><input id="shiftEnd" class="time-input" type="text" value="5:00 PM" readonly aria-describedby="shiftError" aria-invalid="false"></label>
         </div>
@@ -82,7 +80,11 @@
     </div>
   </div>
   <div class="side-column">
-    <div class="toolbar side-save">
+    <div class="toolbar side-save side-toolbar">
+      <div class="side-quick-settings">
+        <label class="setting-field" data-setting="openingWip" for="open"><span data-i18n="settings.wip">WIP เริ่มต้น</span><input id="open" class="opening-input" type="number" min="0"></label>
+        <label class="setting-field" data-setting="targetPerHour" for="targetPerHour"><span data-i18n="settings.hourlyTarget">เป้าหมายต่อชั่วโมง</span><input id="targetPerHour" class="opening-input" type="number" min="0" step="1" value="75"></label>
+      </div>
       <button id="bSave" class="save-button" aria-live="polite" data-i18n="button.save">บันทึก</button>
     </div>
   <aside class="side" id="side">

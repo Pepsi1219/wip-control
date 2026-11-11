@@ -236,7 +236,8 @@ function calc() {
     const raw = remain[i] > 0 ? shortfall * m / remain[i] : 0;
     const extra = Math.round(raw);
     const target = b + extra;
-    const tl = Math.round(Math.max(0, target - bal) * 1.25);
+    const loadGap = i === 0 ? target * 1.25 - bal : (target - bal) * 1.25;
+    const tl = Math.round(Math.max(0, loadGap));
     const balBefore = bal;
     bal = bal + load - qc;
     const x = { i, b, m, load, qc, fn, shortfall, raw, extra, target, tl, balBefore, bal, remain: remain[i], cumBBefore: cumB, cumQBefore: cumQ };
@@ -314,8 +315,8 @@ function renderLesson(R) {
     },
     {
       title: t('lesson.loadTitle'),
-      description: t('lesson.loadDesc'),
-      calculation: t('lesson.loadCalc', { target: f(x.target), balance: f(x.balBefore), load: f(x.tl) })
+      description: t(lessonRow === 0 ? 'lesson.loadDescFirst' : 'lesson.loadDesc'),
+      calculation: t(lessonRow === 0 ? 'lesson.loadCalcFirst' : 'lesson.loadCalc', { target: f(x.target), balance: f(x.balBefore), load: f(x.tl) })
     },
     {
       title: t('lesson.actualTitle'),
@@ -421,14 +422,26 @@ function explain(R, i, c) {
   const x = R.rows[i], r = S.rows[i], lab = r.l;
   const head = `<h2>${t('metric.' + c)}</h2><div class="sub"><span class="tag">${t('explain.rowTag', { period: lab })}</span></div>`;
   if (c === 'tl') {
-    const gap = Math.max(0, x.target - x.balBefore);
-    return head + `<div class="formula">${t('metric.tl')} = round( max(0, ${t('metric.tgt')} − ${t('explain.balanceBefore')}) × 1.25 )</div>
-    <div class="calc">${t('explain.balanceBefore')} = ${f(x.balBefore)} ${t(i === 0 ? 'explain.opening' : 'explain.previousRow')}
+    const first = i === 0;
+    const targetWip = first ? x.target * 1.25 : x.target;
+    const gap = Math.max(0, targetWip - x.balBefore);
+    const formula = first
+      ? `${t('metric.tl')} = round( max(0, 1.25 × ${t('metric.tgt')} − ${t('common.openingWip')}) )`
+      : `${t('metric.tl')} = round( max(0, ${t('metric.tgt')} − ${t('explain.balanceBefore')}) × 1.25 )`;
+    const calculation = first
+      ? `${t('explain.balanceBefore')} = ${f(x.balBefore)} ${t('explain.opening')}
+${t('explain.hourlyTarget')} = ${f(x.target)}
+1.25 × ${f(x.target)} = ${f(targetWip)}
+max(0, ${f(targetWip)} − ${f(x.balBefore)}) = ${f(gap)}
+${f(gap)} → ${t('explain.roundedLoad')} = ${f(x.tl)}`
+      : `${t('explain.balanceBefore')} = ${f(x.balBefore)} ${t('explain.previousRow')}
 ${t('explain.hourlyTarget')} = ${f(x.target)}
 max(0, ${f(x.target)} − ${f(x.balBefore)}) = ${f(gap)}
-${f(gap)} × 1.25 = ${f(gap * 1.25)} → ${t('explain.roundedLoad')} = ${f(x.tl)}</div>
-    <div class="why">${t('explain.tlWhy')}</div>
-    ${x.tl === 0 ? `<div class="note">${t('explain.tlNote')}</div>` : ''}`;
+${f(gap)} × 1.25 = ${f(gap * 1.25)} → ${t('explain.roundedLoad')} = ${f(x.tl)}`;
+    return head + `<div class="formula">${formula}</div>
+    <div class="calc">${calculation}</div>
+    <div class="why">${t(first ? 'explain.tlFirstWhy' : 'explain.tlWhy')}</div>
+    ${x.tl === 0 ? `<div class="note">${t(first ? 'explain.tlFirstNote' : 'explain.tlNote')}</div>` : ''}`;
   }
   if (c === 'load') {
     const lim = 1.25 * x.tl;
@@ -737,14 +750,21 @@ if (savedSnapshot) {
 const tableCard = $('.tblcard');
 const sidePanel = $('#side');
 const settingsPanel = $('.settings-panel');
+const tableToolbar = $('.side-actions');
+const sideToolbar = $('.side-toolbar');
 const syncSideHeight = () => {
+  const tableCardHeight = tableCard.getBoundingClientRect().height;
+  const toolbarHeightDifference = tableToolbar.getBoundingClientRect().height - sideToolbar.getBoundingClientRect().height;
+  sidePanel.style.height = `${Math.max(0, tableCardHeight + toolbarHeightDifference)}px`;
   const sideRect = sidePanel.getBoundingClientRect();
-  sidePanel.style.height = `${tableCard.getBoundingClientRect().height}px`;
   settingsPanel.style.width = `${sideRect.width}px`;
 };
 if ('ResizeObserver' in window) {
   const sideHeightObserver = new ResizeObserver(syncSideHeight);
   sideHeightObserver.observe(tableCard);
+  sideHeightObserver.observe(tableToolbar);
+  sideHeightObserver.observe(sideToolbar);
+  sideHeightObserver.observe(sidePanel);
 } else {
   window.addEventListener('resize', syncSideHeight);
 }

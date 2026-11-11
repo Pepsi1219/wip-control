@@ -52,7 +52,7 @@ function deactivateValueCell() {
   }
   activeValueCell = null;
 }
-const SHIFT_MINUTES = [60, 60, 60, 30, 30, 60, 60, 60, 60, 30, 60, 30];
+const SHIFT_MINUTES = [60, 60, 60, 30, 30, 60, 60, 60, 60, 30, 60, 30, 60];
 const LESSON_CELLS = ['bal', 'tgt', 'tl', 'load', 'qc', 'bal'];
 function fitPickerCalendar(_, __, picker) {
   picker.calendarContainer.style.width = `${Math.ceil(picker.input.getBoundingClientRect().width)}px`;
@@ -68,9 +68,9 @@ const timePickerOptions = {
   disableMobile: true,
   onOpen: fitPickerCalendar,
   minTime: '08:00',
-  maxTime: '20:00'
+  maxTime: '21:00'
 };
-const shiftStartPicker = flatpickr('#shiftStart', { ...timePickerOptions, defaultDate: '8:00 AM', maxTime: '19:55' });
+const shiftStartPicker = flatpickr('#shiftStart', { ...timePickerOptions, defaultDate: '8:00 AM', maxTime: '20:55' });
 const shiftEndPicker = flatpickr('#shiftEnd', { ...timePickerOptions, defaultDate: '5:00 PM', minTime: '08:05' });
 
 function pickerMinutes(picker) {
@@ -96,9 +96,9 @@ function normalizeShiftPickers(changedPicker) {
 
   if (start >= end && changedPicker === shiftStartPicker) {
     end = start + 5;
-    if (end > 20 * 60) {
-      start = 20 * 60 - 5;
-      end = 20 * 60;
+    if (end > 21 * 60) {
+      start = 21 * 60 - 5;
+      end = 21 * 60;
       setPickerMinutes(shiftStartPicker, start);
     }
     setPickerMinutes(shiftEndPicker, end);
@@ -124,7 +124,7 @@ function makeShiftData(source, start, end, targetPerHour) {
   const endMinutes = endHour * 60 + endMinute;
   const rows = [];
 
-  for (let hour = 8; hour < 20; hour++) {
+  for (let hour = 8; hour < 21; hour++) {
     const periodStart = hour * 60;
     const periodEnd = periodStart + 60;
     const activeStart = Math.max(periodStart, startMinutes);
@@ -167,7 +167,7 @@ function updateShiftSettings(changedPicker) {
   normalizeShiftPickers(changedPicker);
   const start = pickerMinutes(shiftStartPicker);
   const end = pickerMinutes(shiftEndPicker);
-  const valid = Number.isFinite(start) && Number.isFinite(end) && start >= 8 * 60 && end <= 20 * 60 && end > start;
+  const valid = Number.isFinite(start) && Number.isFinite(end) && start >= 8 * 60 && end <= 21 * 60 && end > start;
   $('#shiftError').hidden = valid;
   $('#shiftStart').setAttribute('aria-invalid', String(!valid));
   $('#shiftEnd').setAttribute('aria-invalid', String(!valid));

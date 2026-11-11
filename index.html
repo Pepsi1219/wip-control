@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>สื่อการสอน: WIP Control Monitoring</title>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr@4.6.13/dist/flatpickr.min.css">
-<link rel="stylesheet" href="spf-hourly.css">
+<link rel="stylesheet" href="spf-hourly.css?v=3">
 </head>
 <body>
 <header>
@@ -48,7 +48,7 @@
           <label class="setting-field" data-setting="shiftStart"><span data-i18n="settings.shiftStart">เวลาเริ่มงาน</span><input id="shiftStart" class="time-input" type="text" value="8:00 AM" readonly aria-describedby="shiftError" aria-invalid="false"></label>
           <label class="setting-field" data-setting="shiftEnd"><span data-i18n="settings.shiftEnd">เวลาเลิกงาน</span><input id="shiftEnd" class="time-input" type="text" value="5:00 PM" readonly aria-describedby="shiftError" aria-invalid="false"></label>
         </div>
-        <p id="shiftError" class="setting-error" role="alert" hidden data-i18n="settings.shiftError">เวลาเลิกงานต้องอยู่หลังเวลาเริ่มงาน และอยู่ในช่วง 08:00–20:00</p>
+        <p id="shiftError" class="setting-error" role="alert" hidden data-i18n="settings.shiftError">เวลาเลิกงานต้องอยู่หลังเวลาเริ่มงาน และอยู่ในช่วง 08:00–21:00</p>
         <table class="set" id="set">
           <thead><tr><th scope="col" data-i18n="schedule.period">ช่วงเวลา</th><th scope="col" data-i18n="schedule.minutes">นาทีทำงาน</th><th scope="col" data-i18n="schedule.baseTarget">เป้าพื้นฐาน</th></tr></thead>
           <tbody id="setRows"></tbody>
@@ -60,14 +60,14 @@
 </header>
  
 <div class="wrap">
-  <div class="toolbar side-actions">
-    <button id="bReset" class="scenario-button" aria-pressed="false" data-i18n="button.demo">ใช้ข้อมูล Demo</button>
-    <button id="bLoadTarget" class="scenario-button" aria-pressed="false" data-i18n="button.loadTarget">LOAD = TARGET</button>
-    <button id="bQcTarget" class="scenario-button" aria-pressed="false" data-i18n="button.qcTarget">QC PASS = TARGET</button>
-    <button id="bFnTarget" class="scenario-button" aria-pressed="false" data-i18n="button.fnTarget">SCAN BOX = TARGET</button>
-    <button id="bRefresh" class="scenario-button reset-button" aria-label="รีเซ็ต" title="รีเซ็ต" data-i18n-aria="button.refresh" data-i18n-title="button.refresh">&#8635;</button>
-  </div>
   <div class="table-column">
+    <div class="toolbar side-actions">
+      <button id="bReset" class="scenario-button" aria-pressed="false" data-i18n="button.demo">ใช้ข้อมูล Demo</button>
+      <button id="bLoadTarget" class="scenario-button" aria-pressed="false" data-i18n="button.loadTarget">LOAD = TARGET</button>
+      <button id="bQcTarget" class="scenario-button" aria-pressed="false" data-i18n="button.qcTarget">QC PASS = TARGET</button>
+      <button id="bFnTarget" class="scenario-button" aria-pressed="false" data-i18n="button.fnTarget">SCAN BOX = TARGET</button>
+      <button id="bRefresh" class="scenario-button reset-button" aria-label="รีเซ็ต" title="รีเซ็ต" data-i18n-aria="button.refresh" data-i18n-title="button.refresh">&#8635;</button>
+    </div>
     <div class="tblcard">
       <table class="spf" id="tbl">
         <colgroup><col><col><col><col><col><col><col></colgroup>

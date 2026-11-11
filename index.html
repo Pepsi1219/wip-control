@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>สื่อการสอน: WIP Control Monitoring</title>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr@4.6.13/dist/flatpickr.min.css">
-<link rel="stylesheet" href="spf-hourly.css?v=3">
+<link rel="stylesheet" href="spf-hourly.css?v=7">
 </head>
 <body>
 <header>
@@ -81,6 +81,10 @@
       </table>
     </div>
   </div>
+  <div class="side-column">
+    <div class="toolbar side-save">
+      <button id="bSave" class="save-button" aria-live="polite" data-i18n="button.save">บันทึก</button>
+    </div>
   <aside class="side" id="side">
     <div id="selectedExplanation" aria-live="polite"></div>
     <section class="formula-summary" aria-label="สรุปสูตรการคำนวณ" data-i18n-aria="formula.summaryLabel">
@@ -135,6 +139,7 @@
       </article>
     </section>
   </aside>
+  </div>
 </div>
  
 <section class="lower" hidden>

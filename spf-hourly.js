@@ -15,6 +15,37 @@ const N = v => {
 };
 const MAX_VALUE_SLIDER_LIMIT = 1000000;
 localStorage.removeItem('wip-slider-max');
+const STORAGE_KEY = 'spf-hourly-saved-state';
+let saveFeedbackTimer;
+
+function readSavedSnapshot() {
+  try {
+    const snapshot = JSON.parse(localStorage.getItem(STORAGE_KEY));
+    if (snapshot?.version !== 1 || !snapshot.settings || !snapshot.state || !Array.isArray(snapshot.state.rows) || !snapshot.state.rows.length) return null;
+
+    const settings = snapshot.settings;
+    const shiftStart = Number(settings.shiftStart);
+    const shiftEnd = Number(settings.shiftEnd);
+    const targetPerHour = Number(settings.targetPerHour);
+    const sliderLimit = Number(settings.valueSliderLimit);
+    if (![shiftStart, shiftEnd, targetPerHour, sliderLimit].every(Number.isFinite) || shiftStart < 480 || shiftEnd > 1260 || shiftStart >= shiftEnd || targetPerHour < 0 || !Number.isSafeInteger(sliderLimit) || sliderLimit < 1 || sliderLimit > MAX_VALUE_SLIDER_LIMIT) return null;
+    if (!Number.isFinite(Number(snapshot.state.open)) || snapshot.state.rows.some(row => !row || typeof row.l !== 'string')) return null;
+
+    return {
+      settings: { shiftStart, shiftEnd, targetPerHour, valueSliderLimit: sliderLimit, displayAllHours: Boolean(settings.displayAllHours) },
+      state: {
+        open: N(snapshot.state.open),
+        rows: snapshot.state.rows.map(row => ({
+          l: row.l, m: N(row.m), b: N(row.b), load: N(row.load), loadEntered: Boolean(row.loadEntered),
+          qc: N(row.qc), qcEntered: Boolean(row.qcEntered), fn: N(row.fn), fnEntered: Boolean(row.fnEntered)
+        }))
+      }
+    };
+  } catch {
+    return null;
+  }
+}
+
 let valueSliderLimit = 200;
 let activeValueCell = null;
 
@@ -154,6 +185,11 @@ function makeShiftData(source, start, end, targetPerHour) {
 
 function currentShiftData(source) {
   return makeShiftData(source, clockValue(pickerMinutes(shiftStartPicker)), clockValue(pickerMinutes(shiftEndPicker)), N($('#targetPerHour').value));
+}
+
+function initialShiftData() {
+  const initialData = { ...DEF, rows: DEF.rows.map(row => ({ ...row, load: 0, loadEntered: false, qcEntered: false, fnEntered: false })) };
+  return currentShiftData(initialData);
 }
 
 function visibleRowCount() {
@@ -614,25 +650,47 @@ function toggleScenario(scenarioId) {
   $('#' + id).onclick = () => toggleScenario(id);
 });
 $('#bRefresh').onclick = () => {
+  try { localStorage.removeItem(STORAGE_KEY); } catch {}
+  setPickerMinutes(shiftStartPicker, 8 * 60);
+  setPickerMinutes(shiftEndPicker, 17 * 60);
+  $('#targetPerHour').value = '75';
+  $('#displayAllHours').checked = false;
+  valueSliderLimit = 200;
+  $('#valueSliderMaxSetting').value = String(valueSliderLimit);
+  $('#shiftStart').setAttribute('aria-invalid', 'false');
+  $('#shiftEnd').setAttribute('aria-invalid', 'false');
+  $('#shiftError').hidden = true;
   demoSnapshot = null;
   activeScenarios.clear();
   activeScenarios.add('bAllZero');
-  S = JSON.parse(JSON.stringify(scenarioBase));
-  S.rows.forEach(row => {
-    row.load = 0;
-    row.loadEntered = false;
-    row.qc = 0;
-    row.fn = 0;
-    row.qcEntered = false;
-    row.fnEntered = false;
-  });
+  S = initialShiftData();
   scenarioBase = JSON.parse(JSON.stringify(S));
   sel = { i: 0, c: 'tgt' };
   lessonRow = 0;
   lessonStep = 1;
-  $('#lessonPeriod').value = '0';
-  updateScenarioButtons();
-  update();
+  build();
+  applyScenarioSelection();
+};
+$('#bSave').onclick = () => {
+  const button = $('#bSave');
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({
+      version: 1,
+      state: S,
+      settings: {
+        shiftStart: pickerMinutes(shiftStartPicker),
+        shiftEnd: pickerMinutes(shiftEndPicker),
+        targetPerHour: N($('#targetPerHour').value),
+        displayAllHours: $('#displayAllHours').checked,
+        valueSliderLimit
+      }
+    }));
+    button.textContent = window.WIP_I18N.t('button.saved');
+  } catch {
+    button.textContent = window.WIP_I18N.t('button.saveFailed');
+  }
+  clearTimeout(saveFeedbackTimer);
+  saveFeedbackTimer = setTimeout(() => { button.textContent = window.WIP_I18N.t('button.save'); }, 1500);
 };
 $('#lessonPeriod').addEventListener('change', e => {
   lessonRow = Number(e.target.value);
@@ -654,11 +712,28 @@ $('#lessonNext').onclick = () => {
   selectLessonCell(calc());
   renderLesson(calc());
 };
-const initialData = { ...DEF, rows: DEF.rows.map(row => ({ ...row, load: 0, loadEntered: false, qcEntered: false, fnEntered: false })) };
-S = currentShiftData(initialData);
-scenarioBase = JSON.parse(JSON.stringify(S));
+const savedSnapshot = readSavedSnapshot();
+if (savedSnapshot) {
+  setPickerMinutes(shiftStartPicker, savedSnapshot.settings.shiftStart);
+  setPickerMinutes(shiftEndPicker, savedSnapshot.settings.shiftEnd);
+  $('#targetPerHour').value = String(savedSnapshot.settings.targetPerHour);
+  $('#displayAllHours').checked = savedSnapshot.settings.displayAllHours;
+  valueSliderLimit = savedSnapshot.settings.valueSliderLimit;
+  $('#valueSliderMaxSetting').value = String(valueSliderLimit);
+  S = savedSnapshot.state;
+  scenarioBase = JSON.parse(JSON.stringify(S));
+  activeScenarios.clear();
+} else {
+  S = initialShiftData();
+  scenarioBase = JSON.parse(JSON.stringify(S));
+}
 build();
-applyScenarioSelection();
+if (savedSnapshot) {
+  updateScenarioButtons();
+  update();
+} else {
+  applyScenarioSelection();
+}
 const tableCard = $('.tblcard');
 const sidePanel = $('#side');
 const settingsPanel = $('.settings-panel');

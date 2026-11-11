@@ -450,7 +450,7 @@ ${f(gap)} × 1.25 = ${f(gap * 1.25)} → ${t('explain.roundedLoad')} = ${f(x.tl)
     const arrowMeaning = x.qcDiff < 0 ? t('explain.qcBehind', { amount: f(Math.abs(x.qcDiff)) }) : x.qcDiff > 0 ? t('explain.qcAhead', { amount: f(x.qcDiff) }) : t('explain.qcEqual');
     return head + `<div class="formula">${t('metric.qc')} = period_qc_pass<br>${t('explain.qcArrow')} = Σ${t('metric.qc')} − Σ${t('metric.tgt')}</div>
     <div class="calc">${t('metric.qc')} = ${f(x.qc)} | Σ${t('metric.qc')} = ${f(x.cumQ)} | Σ${t('metric.tgt')} = ${f(x.cumT)}<br>${arrowMeaning}</div>
-    <div class="why">${t('explain.qcGreen')}<br><br>${t('explain.qcInput')}</div>`;
+    <div class="why">${t('explain.qcGreen')}<br>${t('explain.qcInput')}</div>`;
   }
   if (c === 'bal') {
     return head + `<div class="formula">${t('metric.bal')} = ${t('explain.balanceBefore')} + ${t('metric.load')} − ${t('metric.qc')}</div>
@@ -460,7 +460,7 @@ ${f(gap)} × 1.25 = ${f(gap * 1.25)} → ${t('explain.roundedLoad')} = ${f(x.tl)
   if (c === 'fn') {
     return head + `<div class="formula">${t('metric.fn')} = period_fn_qty<br>${t('explain.qcArrow')} = Σ${t('metric.fn')} − Σ${t('metric.tgt')}</div>
     <div class="calc">${t('metric.fn')} = ${f(x.fn)} | Σ${t('metric.fn')} = ${f(x.cumF)} | Σ${t('metric.tgt')} = ${f(x.cumT)}<br>${t('metric.fn')} − ${t('metric.tgt')} = ${f(x.fnDiff)}</div>
-    <div class="why">${t('explain.fnGreen')}<br><br>${t('explain.fnSeparate')}</div>`;
+    <div class="why">${t('explain.fnGreen')}<br>${t('explain.fnSeparate')}</div>`;
   }
 }
 function explainSum(R, c) {

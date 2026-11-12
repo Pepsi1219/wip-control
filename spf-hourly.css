@@ -116,11 +116,17 @@ section.lower>h2:first-child{margin-top:12px}
 .formula-summary-item h3{margin:0 0 6px;color:var(--cyan);font-size:14px}
 .formula-summary-item p,.formula-summary-item ul{margin:6px 0;font-size:13px;line-height:1.6}
 .formula-summary-item ul{padding-left:18px}
+.formula-live{margin-top:12px;padding:10px 12px;background:var(--tbl);border:1px solid var(--line);border-radius:8px}
+.formula-live label{display:flex;align-items:center;justify-content:space-between;gap:10px;font-size:13px;font-weight:700}
+.formula-live select{max-width:55%;min-width:120px;padding:6px 8px;border:1px solid var(--line);border-radius:6px;background:var(--panel);color:var(--txt);font:inherit}
+.formula-live p{overflow-wrap:anywhere}
 table.set{width:100%;border-collapse:collapse;font-size:12px;margin-top:12px}
 table.set th,table.set td{border:1px solid var(--line);padding:4px 8px;text-align:center}
 table.set thead th{background:#16213f;color:#c5cbd6;font-weight:600}
 table.set tbody tr:nth-child(even){background:rgba(255,255,255,.025)}
 table.set tfoot th,table.set tfoot td{background:#101827;color:var(--cyan);font-weight:700}
+.schedule-minute-input{width:64px;max-width:100%;padding:4px 5px;border:1px solid #2f3f69;border-radius:6px;background:#0a1226;color:var(--txt);text-align:center;font:inherit}
+.schedule-minute-input:focus{outline:2px solid var(--cyan);outline-offset:1px}
 .opening-input{width:80px;background:#0a1226;border:1px solid #2f3f69;border-radius:6px;color:#fff;padding:4px 6px;text-align:center;font:inherit}
 #open,#targetPerHour{-webkit-appearance:none;appearance:textfield;-moz-appearance:textfield}
 #open::-webkit-inner-spin-button,#open::-webkit-outer-spin-button,#targetPerHour::-webkit-inner-spin-button,#targetPerHour::-webkit-outer-spin-button{-webkit-appearance:none;appearance:none;margin:0}

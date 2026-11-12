@@ -9,6 +9,7 @@
       'settings.shiftError': 'เวลาเลิกงานต้องอยู่หลังเวลาเริ่มงาน และอยู่ในช่วง 08:00–21:00',
       'display.allHours': 'แสดงทุกชั่วโมง', 'theme.darkMode': 'โหมดมืด', 'theme.lightMode': 'โหมดสว่าง',
       'settings.language': 'ภาษา', 'settings.theme': 'ธีม', 'schedule.period': 'ช่วงเวลา', 'schedule.minutes': 'นาทีทำงาน',
+      'schedule.minutesFor': 'นาทีทำงานของ {period}',
       'schedule.baseTarget': 'เป้าพื้นฐาน', 'common.total': 'รวม', 'common.summary': 'สรุป', 'common.max': 'สูงสุด',
       'button.demo': 'ใช้ข้อมูล Demo', 'button.loadTarget': 'LOAD = TARGET', 'button.qcTarget': 'QC PASS = TARGET',
       'button.fnTarget': 'SCAN BOX = TARGET', 'button.save': 'บันทึก', 'button.saved': 'บันทึกแล้ว', 'button.saveFailed': 'บันทึกไม่สำเร็จ', 'button.refresh': 'รีเซ็ต', 'metric.hourlyOutput': 'Hourly Output',
@@ -24,8 +25,8 @@
       'lesson.startDescNext': 'คาบนี้เริ่มจาก Balance ที่เหลือหลังจบคาบก่อนหน้า และส่งต่อไปทีละคาบ',
       'lesson.startCalcFirst': 'WIP เริ่มต้น = {open} ชิ้น\nWIP ก่อน {period} = {balance} ชิ้น',
       'lesson.startCalcNext': 'Balance หลัง {previous} = {balance} ชิ้น\nWIP ก่อน {period} = {balance} ชิ้น',
-      'lesson.targetTitle': 'กำหนดเป้าหมายของคาบนี้', 'lesson.targetDesc': 'เริ่มจากเป้าหมายต่อชั่วโมง แล้วบวกยอดที่ต้องไล่ตาม โดยดูจากเวลาทำงานที่เหลือ',
-      'lesson.targetCalc': 'ยอดขาดสะสม = max(0, {baseBefore} − {qcBefore}) = {shortfall} ชิ้น\nยอดเพิ่ม = {extraFormula}\nเป้าหมายต่อชั่วโมง {base} + ยอดเพิ่ม {extra} = HOURLY TARGET {target} ชิ้น',
+      'lesson.targetTitle': 'กำหนดเป้าหมายของคาบนี้', 'lesson.targetDesc': 'สูตรจำลองนี้เทียบ QC สะสมกับเป้าพื้นฐานสะสมก่อนคาบ โดยไม่รวมยอดเพิ่มที่เคยกระจาย สูตรจริงของ backend ยังไม่ยืนยัน',
+      'lesson.targetCalc': 'ยอดขาดจากเป้าพื้นฐานสะสม = max(0, {baseBefore} − {qcBefore}) = {shortfall} ชิ้น\nยอดเพิ่ม = {extraFormula}\nเป้าหมายต่อชั่วโมง {base} + ยอดเพิ่ม {extra} = HOURLY TARGET {target} ชิ้น',
       'lesson.loadTitle': 'คำนวณจำนวนงานที่ควรโหลด', 'lesson.loadDesc': 'นำเป้าหมายต่อชั่วโมงของชั่วโมงนี้ลบ WIP ของชั่วโมงก่อน ถ้ายังขาดให้โหลดเพิ่มและเผื่ออีก 25%; ถ้า WIP มากกว่าเป้า TARGET LOAD จะเป็น 0',
       'lesson.loadDescFirst': 'ชั่วโมงแรกตั้งระดับ BALANCE WIP เป้าหมายเป็น HOURLY TARGET × 1.25 แล้วหัก WIP เริ่มต้นเพื่อหาจำนวนที่ควรโหลด; หาก WIP เริ่มต้นถึงหรือเกินระดับนี้ TARGET LOAD จะเป็น 0',
       'lesson.loadCalc': 'round(max(0, HOURLY TARGET − WIP ก่อนคาบ) × 1.25)\nround(max(0, {target} − {balance}) × 1.25) = {load} ชิ้น',
@@ -40,7 +41,10 @@
       'lesson.balanceCalcLast': '{balanceBefore} + {load} − {qc} = {balance} ชิ้น\nWIP หลัง {period} = {balance} ชิ้น',
       'formula.tl': `<h3>TARGET LOAD (จำนวนงานที่ควรโหลด)</h3><p>ชั่วโมงแรกกำหนด WIP เป้าหมายไว้ที่ HOURLY TARGET × 1.25 แล้วหัก WIP เริ่มต้นเพื่อหาจำนวนที่ควรโหลด หาก WIP เริ่มต้นสูงกว่าระดับนี้ TARGET LOAD เป็น 0 เพราะไม่สามารถลด WIP ด้วยการโหลดค่าติดลบได้</p><p>ชั่วโมงถัดไปใช้ส่วนที่ขาดจาก HOURLY TARGET แล้วเผื่อ 25%: round(max(0, HOURLY TARGET − BALANCE ก่อนหน้า) × 1.25)</p><p><b>ตัวอย่าง:</b> เป้า 85 และ WIP เริ่มต้น 60 จะได้ round(106.25 − 60) = 46 ชิ้น; เมื่อ WIP เริ่มต้น 0 จะได้ round(106.25) = 106 ชิ้น</p>`,
       'formula.load': `<h3>ACTUAL LOAD (งานที่โหลดเข้า)</h3><p>จำนวนงานที่โหลดเข้าไลน์เย็บในชั่วโมงนั้น ระบบหลังบ้านเป็นผู้คำนวณ หน้าจอแสดงผลเท่านั้น</p><p><b>สีบอกว่าป้อนงานพอดีหรือไม่</b> โดยเทียบกับ TARGET LOAD</p><ul><li><span class="hi"><b>สีส้ม</b></span> = โหลดเกิน 1.25 เท่าของ TARGET LOAD</li><li><span class="lo"><b>สีฟ้า</b></span> = โหลดน้อยกว่า TARGET LOAD</li><li>สีขาว = อยู่ในช่วงที่ยอมรับได้</li></ul><p><b>ตัวอย่าง:</b> ถ้า WIP สูงจน TARGET LOAD เป็น 0 แต่ยังโหลดเพิ่ม ค่านี้จะแสดงเป็นสีส้ม</p>`,
-      'formula.tgt': `<h3>HOURLY TARGET (เป้าหมายรายชั่วโมง)</h3><p>เป้าพื้นฐานของชั่วโมงนั้น <b>บวกยอดที่ต้องไล่ตาม</b></p><p>ถ้าชั่วโมงก่อนทำ QC ไม่ถึงเป้า ยอดที่ขาดจะถูกกระจายไปยังเวลาทำงานที่เหลือของวัน</p><p><b>ตัวอย่าง:</b> ชั่วโมงแรกเป้า 75 ทำ QC ได้ 25 จึงขาด 50 เมื่อเหลือเวลา 7 ชั่วโมง ชั่วโมงถัดไปจะรับยอดเพิ่มประมาณ 7 เป้าเป็น 82 และยอดเพิ่มจะสูงขึ้นเมื่อใกล้เลิกงาน</p>`,
+      'formula.tgt': `<h3>HOURLY TARGET (เป้าหมายรายชั่วโมง)</h3><p>เป้าพื้นฐานของคาบนี้บวกยอดเพิ่มที่คำนวณจากยอดขาดสะสมและเวลาที่เหลือ สูตรในสื่อนี้เป็นสูตรประมาณการ ยังไม่ยืนยันว่าเป็นสูตร backend จริง</p><div class="formula-live" id="formulaTargetLive" aria-live="polite"></div>`,
+      'formula.tgt.period': 'เลือกคาบที่ต้องการตรวจสอบ', 'formula.tgt.baseBefore': 'เป้าพื้นฐานสะสมก่อนคาบ',
+      'formula.tgt.qcBefore': 'QC PASS สะสมก่อนคาบ', 'formula.tgt.shortfall': 'ยอดขาดสะสม',
+      'formula.tgt.extra': 'ยอดเพิ่ม', 'formula.tgt.result': 'HOURLY TARGET',
       'formula.qc': `<h3>QC PASS (งานที่ตรวจผ่าน)</h3><p>จำนวนงานที่ผ่านการตรวจคุณภาพในชั่วโมงนั้น รวมงานแก้ไขที่กลับมาผ่าน</p><p><b>ลูกศรแสดงยอดที่ตามหลังหรือนำเป้าสะสม</b> คิดจาก QC สะสมลบเป้าสะสม</p><ul><li>ลูกศรลงสีแดง = ตามหลังเป้า</li><li>ลูกศรขึ้นสีเขียว = ทำได้เกินเป้าสะสม</li><li>ไม่มีลูกศร = เท่ากับเป้าสะสม</li></ul><p><b>ตัวอย่าง:</b> QC สะสม 115 แต่เป้าสะสม 245 จะแสดง ↓130</p>`,
       'formula.bal': `<h3>BALANCE WIP (งานค้างในสาย)</h3><p>งานที่ยังอยู่ในสายเย็บและยังไม่ผ่าน QC</p><p><b>งานค้าง = งานค้างก่อนหน้า + ACTUAL LOAD − QC PASS</b></p><p><b>ตัวอย่าง:</b> WIP เริ่มต้น 172 โหลดเข้า 82 และ QC ผ่าน 25 จะเหลือ 172 + 82 − 25 = <b>229</b> ชิ้น</p>`,
       'formula.fn': `<h3>SCAN BOX (งานที่สแกนกล่องแล้ว)</h3><p>จำนวนงานที่สแกนกล่องหรือส่งต่อในชั่วโมงนั้น</p><ul><li>ตัวเลขเป็น <b>สีเขียว</b> เมื่อมากกว่า HOURLY TARGET</li><li>ลูกศรแสดงยอดสแกนสะสมเทียบกับเป้าสะสม</li><li>ค่านี้ไม่ใช้คำนวณ Balance WIP ซึ่งใช้ QC PASS</li></ul>`
@@ -54,6 +58,7 @@
       'settings.shiftError': 'Shift end must be later than shift start and between 08:00 and 21:00.',
       'display.allHours': 'Show every hour', 'theme.darkMode': 'Dark mode', 'theme.lightMode': 'Light mode',
       'settings.language': 'Language', 'settings.theme': 'Theme', 'schedule.period': 'Period', 'schedule.minutes': 'Work minutes',
+      'schedule.minutesFor': 'Work minutes for {period}',
       'schedule.baseTarget': 'Base target', 'common.total': 'Total', 'common.summary': 'Summary', 'common.max': 'Max',
       'button.demo': 'Load demo data', 'button.loadTarget': 'LOAD = TARGET', 'button.qcTarget': 'QC PASS = TARGET',
       'button.fnTarget': 'SCAN BOX = TARGET', 'button.save': 'Save', 'button.saved': 'Saved', 'button.saveFailed': 'Save failed', 'button.refresh': 'Reset', 'metric.hourlyOutput': 'Hourly Output',
@@ -69,8 +74,8 @@
       'lesson.startDescNext': 'This period starts with the Balance left after the previous period; WIP carries forward period by period.',
       'lesson.startCalcFirst': 'Opening WIP = {open} pieces\nWIP before {period} = {balance} pieces',
       'lesson.startCalcNext': 'Balance after {previous} = {balance} pieces\nWIP before {period} = {balance} pieces',
-      'lesson.targetTitle': 'Set this period’s target', 'lesson.targetDesc': 'Start with the base target and add the catch-up amount according to remaining work time. This extra-target formula is an estimate from sample data, not a confirmed server formula.',
-      'lesson.targetCalc': 'Cumulative shortfall = max(0, {baseBefore} − {qcBefore}) = {shortfall} pieces\nExtra = {extraFormula}\nBase target {base} + extra {extra} = HOURLY TARGET {target} pieces',
+      'lesson.targetTitle': 'Set this period’s target', 'lesson.targetDesc': 'This simulator compares cumulative QC with cumulative base targets before this period; it excludes previously added extra targets. The backend formula is unconfirmed.',
+      'lesson.targetCalc': 'Shortfall from cumulative base target = max(0, {baseBefore} − {qcBefore}) = {shortfall} pieces\nExtra = {extraFormula}\nBase target {base} + extra {extra} = HOURLY TARGET {target} pieces',
       'lesson.loadTitle': 'Calculate the recommended load', 'lesson.loadDesc': 'Subtract WIP before the period from its target. Load the shortfall plus a 25% buffer; if WIP exceeds the target, TARGET LOAD is 0.',
       'lesson.loadDescFirst': 'For the first hour, set the target WIP level to HOURLY TARGET × 1.25 and subtract opening WIP. TARGET LOAD is 0 if opening WIP already meets or exceeds that level.',
       'lesson.loadCalc': 'round(max(0, HOURLY TARGET − WIP before period) × 1.25)\nround(max(0, {target} − {balance}) × 1.25) = {load} pieces',
@@ -85,7 +90,10 @@
       'lesson.balanceCalcLast': '{balanceBefore} + {load} − {qc} = {balance} pieces\nWIP after {period} = {balance} pieces',
       'formula.tl': `<h3>TARGET LOAD (recommended pieces to load)</h3><p>For the first hour, set target WIP to HOURLY TARGET × 1.25, then subtract opening WIP. If opening WIP already meets or exceeds this level, TARGET LOAD is 0 because a nonnegative load cannot reduce WIP.</p><p>Later hours use the shortfall from HOURLY TARGET plus a 25% buffer: round(max(0, HOURLY TARGET − previous BALANCE) × 1.25).</p><p><b>Example:</b> With a target of 85 and opening WIP of 60, round(106.25 − 60) = 46 pieces; with opening WIP 0, round(106.25) = 106 pieces.</p>`,
       'formula.load': `<h3>ACTUAL LOAD (pieces loaded)</h3><p>Pieces loaded into the sewing line during the period. The backend calculates this value; the page displays it.</p><p><b>Color shows whether loading is on target</b>, compared with TARGET LOAD.</p><ul><li><span class="hi"><b>Orange</b></span> = more than 1.25 times TARGET LOAD</li><li><span class="lo"><b>Blue</b></span> = below TARGET LOAD</li><li>White = within the acceptable range</li></ul><p><b>Example:</b> If WIP is high, TARGET LOAD is 0. Any additional load is shown in orange.</p>`,
-      'formula.tgt': `<h3>HOURLY TARGET (period target)</h3><p>The period's base target <b>plus the amount needed to catch up</b>.</p><p>When QC falls short in earlier periods, the shortfall is distributed across the remaining work time.</p><p><b>Example:</b> A target of 75 and QC of 25 leave a shortfall of 50. With 7 hours left, the next period receives about 7 extra pieces. The added target rises as the shift approaches its end.</p>`,
+      'formula.tgt': `<h3>HOURLY TARGET (period target)</h3><p>This period's base target plus an extra calculated from cumulative shortfall and remaining work time. This simulator uses an estimate; the actual backend formula is unconfirmed.</p><div class="formula-live" id="formulaTargetLive" aria-live="polite"></div>`,
+      'formula.tgt.period': 'Choose a period to inspect', 'formula.tgt.baseBefore': 'Cumulative base target before period',
+      'formula.tgt.qcBefore': 'Cumulative QC PASS before period', 'formula.tgt.shortfall': 'Cumulative shortfall',
+      'formula.tgt.extra': 'Extra target', 'formula.tgt.result': 'HOURLY TARGET',
       'formula.qc': `<h3>QC PASS (pieces passing inspection)</h3><p>Pieces that pass quality inspection during the period, including repaired pieces that pass again.</p><p><b>The arrow shows the cumulative lead or shortfall:</b> cumulative QC minus cumulative target.</p><ul><li>Red down arrow = behind target</li><li>Green up arrow = ahead of cumulative target</li><li>No arrow = exactly on target</li></ul><p><b>Example:</b> Cumulative QC of 115 against a target of 245 displays ↓130.</p>`,
       'formula.bal': `<h3>BALANCE WIP (work remaining in line)</h3><p>Pieces still in the sewing line that have not passed QC.</p><p><b>Balance = previous balance + ACTUAL LOAD − QC PASS</b></p><p><b>Example:</b> Opening WIP 172, load 82, and QC 25 gives 172 + 82 − 25 = <b>229</b> pieces.</p>`,
       'formula.fn': `<h3>SCAN BOX (pieces scanned into boxes)</h3><p>Pieces scanned into boxes or handed off during the period.</p><ul><li>The value is <b>green</b> when it is greater than HOURLY TARGET.</li><li>The arrow compares cumulative scans with the cumulative target.</li><li>This value does not affect Balance WIP; QC PASS is used for that calculation.</li></ul>`
@@ -99,6 +107,7 @@
       'settings.shiftError': 'Giờ kết thúc phải sau giờ bắt đầu và nằm trong khoảng 08:00–21:00.',
       'display.allHours': 'Hiển thị tất cả giờ', 'theme.darkMode': 'Giao diện tối', 'theme.lightMode': 'Giao diện sáng',
       'settings.language': 'Ngôn ngữ', 'settings.theme': 'Giao diện', 'schedule.period': 'Khung giờ', 'schedule.minutes': 'Phút làm việc',
+      'schedule.minutesFor': 'Phút làm việc của {period}',
       'schedule.baseTarget': 'Mục tiêu cơ bản', 'common.total': 'Tổng', 'common.summary': 'Tổng kết', 'common.max': 'Tối đa',
       'button.demo': 'Dùng dữ liệu mẫu', 'button.loadTarget': 'LOAD = TARGET', 'button.qcTarget': 'QC PASS = TARGET',
       'button.fnTarget': 'SCAN BOX = TARGET', 'button.save': 'Lưu', 'button.saved': 'Đã lưu', 'button.saveFailed': 'Lưu thất bại', 'button.refresh': 'Đặt lại', 'metric.hourlyOutput': 'Sản lượng theo giờ',
@@ -114,8 +123,8 @@
       'lesson.startDescNext': 'Khung giờ này bắt đầu bằng Balance còn lại sau khung giờ trước; WIP được chuyển tiếp từng khung giờ.',
       'lesson.startCalcFirst': 'WIP đầu ca = {open} sản phẩm\nWIP trước {period} = {balance} sản phẩm',
       'lesson.startCalcNext': 'Balance sau {previous} = {balance} sản phẩm\nWIP trước {period} = {balance} sản phẩm',
-      'lesson.targetTitle': 'Đặt mục tiêu cho khung giờ này', 'lesson.targetDesc': 'Bắt đầu với mục tiêu cơ bản rồi cộng phần cần bù theo thời gian làm việc còn lại. Công thức phần tăng là ước tính từ dữ liệu mẫu, chưa phải công thức đã xác nhận từ máy chủ.',
-      'lesson.targetCalc': 'Thiếu hụt lũy kế = max(0, {baseBefore} − {qcBefore}) = {shortfall} sản phẩm\nPhần tăng = {extraFormula}\nMục tiêu cơ bản {base} + phần tăng {extra} = HOURLY TARGET {target} sản phẩm',
+      'lesson.targetTitle': 'Đặt mục tiêu cho khung giờ này', 'lesson.targetDesc': 'Mô phỏng so sánh QC lũy kế với mục tiêu cơ bản lũy kế trước khung giờ này, không gồm phần mục tiêu tăng đã phân bổ trước đó. Công thức máy chủ chưa được xác nhận.',
+      'lesson.targetCalc': 'Thiếu hụt so với mục tiêu cơ bản lũy kế = max(0, {baseBefore} − {qcBefore}) = {shortfall} sản phẩm\nPhần tăng = {extraFormula}\nMục tiêu cơ bản {base} + phần tăng {extra} = HOURLY TARGET {target} sản phẩm',
       'lesson.loadTitle': 'Tính lượng cần nạp', 'lesson.loadDesc': 'Lấy mục tiêu trừ WIP trước khung giờ. Nạp phần thiếu và thêm dự phòng 25%; nếu WIP vượt mục tiêu, TARGET LOAD bằng 0.',
       'lesson.loadDescFirst': 'Trong giờ đầu, đặt mức WIP mục tiêu bằng HOURLY TARGET × 1.25 rồi trừ WIP đầu ca. TARGET LOAD bằng 0 nếu WIP đầu ca đã đạt hoặc vượt mức này.',
       'lesson.loadCalc': 'round(max(0, HOURLY TARGET − WIP trước khung giờ) × 1.25)\nround(max(0, {target} − {balance}) × 1.25) = {load} sản phẩm',
@@ -130,7 +139,10 @@
       'lesson.balanceCalcLast': '{balanceBefore} + {load} − {qc} = {balance} sản phẩm\nWIP sau {period} = {balance} sản phẩm',
       'formula.tl': `<h3>TARGET LOAD (số lượng nên nạp)</h3><p>Trong giờ đầu, đặt WIP mục tiêu bằng HOURLY TARGET × 1.25 rồi trừ WIP đầu ca. Nếu WIP đầu ca đã đạt hoặc vượt mức này, TARGET LOAD bằng 0 vì lượng nạp không thể âm để giảm WIP.</p><p>Các giờ tiếp theo lấy phần thiếu so với HOURLY TARGET rồi cộng dự phòng 25%: round(max(0, HOURLY TARGET − BALANCE trước đó) × 1.25).</p><p><b>Ví dụ:</b> Mục tiêu 85 và WIP đầu ca 60 thì round(106.25 − 60) = 46 sản phẩm; nếu WIP đầu ca bằng 0 thì round(106.25) = 106 sản phẩm.</p>`,
       'formula.load': `<h3>ACTUAL LOAD (số lượng đã nạp)</h3><p>Số sản phẩm được nạp vào chuyền may trong khung giờ. Hệ thống máy chủ tính giá trị này, trang chỉ hiển thị.</p><p><b>Màu sắc cho biết lượng nạp có phù hợp không</b>, so với TARGET LOAD.</p><ul><li><span class="hi"><b>Màu cam</b></span> = cao hơn 1.25 lần TARGET LOAD</li><li><span class="lo"><b>Màu xanh dương</b></span> = thấp hơn TARGET LOAD</li><li>Màu trắng = trong phạm vi chấp nhận</li></ul><p><b>Ví dụ:</b> Nếu WIP cao, TARGET LOAD bằng 0. Nạp thêm sẽ hiển thị màu cam.</p>`,
-      'formula.tgt': `<h3>HOURLY TARGET (mục tiêu theo giờ)</h3><p>Mục tiêu cơ bản của khung giờ <b>cộng phần cần bù tiến độ</b>.</p><p>Nếu QC ở các khung giờ trước chưa đạt, phần thiếu được phân bổ vào thời gian làm việc còn lại.</p><p><b>Ví dụ:</b> Mục tiêu 75, QC đạt 25 nên thiếu 50. Khi còn 7 giờ, khung giờ tiếp theo nhận thêm khoảng 7 sản phẩm. Phần mục tiêu tăng dần khi gần hết ca.</p>`,
+      'formula.tgt': `<h3>HOURLY TARGET (mục tiêu theo giờ)</h3><p>Mục tiêu cơ bản của khung giờ này cộng phần tăng được tính từ thiếu hụt lũy kế và thời gian còn lại. Công thức trong mô phỏng là ước tính; công thức máy chủ thực tế chưa được xác nhận.</p><div class="formula-live" id="formulaTargetLive" aria-live="polite"></div>`,
+      'formula.tgt.period': 'Chọn khung giờ cần kiểm tra', 'formula.tgt.baseBefore': 'Mục tiêu cơ bản lũy kế trước khung giờ',
+      'formula.tgt.qcBefore': 'QC PASS lũy kế trước khung giờ', 'formula.tgt.shortfall': 'Thiếu hụt lũy kế',
+      'formula.tgt.extra': 'Phần tăng', 'formula.tgt.result': 'HOURLY TARGET',
       'formula.qc': `<h3>QC PASS (sản phẩm đạt kiểm tra)</h3><p>Số sản phẩm đạt kiểm tra chất lượng trong khung giờ, bao gồm hàng sửa đã đạt lại.</p><p><b>Mũi tên cho biết mức vượt hoặc thiếu lũy kế:</b> QC lũy kế trừ mục tiêu lũy kế.</p><ul><li>Mũi tên đỏ xuống = đang thiếu mục tiêu</li><li>Mũi tên xanh lên = vượt mục tiêu lũy kế</li><li>Không có mũi tên = bằng đúng mục tiêu</li></ul><p><b>Ví dụ:</b> QC lũy kế 115 so với mục tiêu 245 sẽ hiển thị ↓130.</p>`,
       'formula.bal': `<h3>BALANCE WIP (hàng còn trong chuyền)</h3><p>Sản phẩm vẫn ở trong chuyền may và chưa qua QC.</p><p><b>WIP còn lại = WIP trước đó + ACTUAL LOAD − QC PASS</b></p><p><b>Ví dụ:</b> WIP đầu ca 172, nạp 82, QC đạt 25 thì 172 + 82 − 25 = <b>229</b> sản phẩm.</p>`,
       'formula.fn': `<h3>SCAN BOX (sản phẩm đã quét thùng)</h3><p>Số sản phẩm được quét vào thùng hoặc chuyển giao trong khung giờ.</p><ul><li>Giá trị có màu <b>xanh lá</b> khi lớn hơn HOURLY TARGET.</li><li>Mũi tên so sánh số quét lũy kế với mục tiêu lũy kế.</li><li>Giá trị này không dùng để tính Balance WIP; phép tính sử dụng QC PASS.</li></ul>`
@@ -144,6 +156,7 @@
       'settings.shiftError': 'ເວລາເລີກວຽກຕ້ອງຫຼັງເວລາເລີ່ມ ແລະຢູ່ໃນຊ່ວງ 08:00–21:00.',
       'display.allHours': 'ສະແດງທຸກຊົ່ວໂມງ', 'theme.darkMode': 'ໂໝດມືດ', 'theme.lightMode': 'ໂໝດສະຫວ່າງ',
       'settings.language': 'ພາສາ', 'settings.theme': 'ຮູບແບບ', 'schedule.period': 'ຊ່ວງເວລາ', 'schedule.minutes': 'ນາທີເຮັດວຽກ',
+      'schedule.minutesFor': 'ນາທີເຮັດວຽກຂອງ {period}',
       'schedule.baseTarget': 'ເປົ້າໝາຍພື້ນຖານ', 'common.total': 'ລວມ', 'common.summary': 'ສະຫຼຸບ', 'common.max': 'ສູງສຸດ',
       'button.demo': 'ໃຊ້ຂໍ້ມູນຕົວຢ່າງ', 'button.loadTarget': 'LOAD = TARGET', 'button.qcTarget': 'QC PASS = TARGET',
       'button.fnTarget': 'SCAN BOX = TARGET', 'button.save': 'ບັນທຶກ', 'button.saved': 'ບັນທຶກແລ້ວ', 'button.saveFailed': 'ບັນທຶກບໍ່ສຳເລັດ', 'button.refresh': 'ຕັ້ງຄ່າໃໝ່', 'metric.hourlyOutput': 'ຜົນຜະລິດລາຍຊົ່ວໂມງ',
@@ -159,8 +172,8 @@
       'lesson.startDescNext': 'ຊ່ວງນີ້ເລີ່ມຈາກ Balance ທີ່ເຫຼືອຫຼັງຊ່ວງກ່ອນ; WIP ຈະຖືກສົ່ງຕໍ່ໄປແຕ່ລະຊ່ວງ.',
       'lesson.startCalcFirst': 'WIP ເລີ່ມຕົ້ນ = {open} ຊິ້ນ\nWIP ກ່ອນ {period} = {balance} ຊິ້ນ',
       'lesson.startCalcNext': 'Balance ຫຼັງ {previous} = {balance} ຊິ້ນ\nWIP ກ່ອນ {period} = {balance} ຊິ້ນ',
-      'lesson.targetTitle': 'ກຳນົດເປົ້າໝາຍຂອງຊ່ວງນີ້', 'lesson.targetDesc': 'ເລີ່ມຈາກເປົ້າພື້ນຖານ ແລ້ວບວກຈຳນວນທີ່ຕ້ອງຕາມໃຫ້ທັນຕາມເວລາເຮັດວຽກທີ່ເຫຼືອ. ສູດນີ້ເປັນການປະເມີນຈາກຂໍ້ມູນຕົວຢ່າງ.',
-      'lesson.targetCalc': 'ຂາດສະສົມ = max(0, {baseBefore} − {qcBefore}) = {shortfall} ຊິ້ນ\nຈຳນວນເພີ່ມ = {extraFormula}\nເປົ້າພື້ນຖານ {base} + ເພີ່ມ {extra} = HOURLY TARGET {target} ຊິ້ນ',
+      'lesson.targetTitle': 'ກຳນົດເປົ້າໝາຍຂອງຊ່ວງນີ້', 'lesson.targetDesc': 'ຕົວຈຳລອງປຽບທຽບ QC ສະສົມກັບເປົ້າພື້ນຖານສະສົມກ່ອນຊ່ວງນີ້, ໂດຍບໍ່ລວມຍອດເພີ່ມທີ່ແຈກຢາຍໄປແລ້ວ. ສູດຈາກ backend ຍັງບໍ່ຢືນຢັນ.',
+      'lesson.targetCalc': 'ຂາດຈາກເປົ້າພື້ນຖານສະສົມ = max(0, {baseBefore} − {qcBefore}) = {shortfall} ຊິ້ນ\nຈຳນວນເພີ່ມ = {extraFormula}\nເປົ້າພື້ນຖານ {base} + ເພີ່ມ {extra} = HOURLY TARGET {target} ຊິ້ນ',
       'lesson.loadTitle': 'ຄຳນວນຈຳນວນທີ່ຄວນໂຫຼດ', 'lesson.loadDesc': 'ເອົາ WIP ກ່ອນຊ່ວງລົບຈາກເປົ້າ. ໂຫຼດສ່ວນທີ່ຂາດແລະເພີ່ມສຳຮອງ 25%; ຖ້າ WIP ເກີນເປົ້າ TARGET LOAD ເປັນ 0.',
       'lesson.loadDescFirst': 'ໃນຊົ່ວໂມງທຳອິດ ກຳນົດ WIP ເປົ້າໝາຍເປັນ HOURLY TARGET × 1.25 ແລ້ວຫັກ WIP ເລີ່ມຕົ້ນ. TARGET LOAD ເປັນ 0 ຖ້າ WIP ເລີ່ມຕົ້ນຮອດ ຫຼືເກີນລະດັບນີ້.',
       'lesson.loadCalc': 'round(max(0, HOURLY TARGET − WIP ກ່ອນຊ່ວງ) × 1.25)\nround(max(0, {target} − {balance}) × 1.25) = {load} ຊິ້ນ',
@@ -175,7 +188,10 @@
       'lesson.balanceCalcLast': '{balanceBefore} + {load} − {qc} = {balance} ຊິ້ນ\nWIP ຫຼັງ {period} = {balance} ຊິ້ນ',
       'formula.tl': `<h3>TARGET LOAD (ຈຳນວນທີ່ຄວນໂຫຼດ)</h3><p>ໃນຊົ່ວໂມງທຳອິດ ກຳນົດ WIP ເປົ້າໝາຍເປັນ HOURLY TARGET × 1.25 ແລ້ວຫັກ WIP ເລີ່ມຕົ້ນ. ຖ້າ WIP ເລີ່ມຕົ້ນຮອດ ຫຼືເກີນລະດັບນີ້ TARGET LOAD ເປັນ 0 ເພາະບໍ່ສາມາດຫຼຸດ WIP ດ້ວຍການໂຫຼດຄ່າຕິດລົບ.</p><p>ຊົ່ວໂມງຕໍ່ໄປໃຊ້ຈຳນວນທີ່ຂາດຈາກ HOURLY TARGET ແລ້ວເພີ່ມສຳຮອງ 25%: round(max(0, HOURLY TARGET − BALANCE ກ່ອນໜ້າ) × 1.25).</p><p><b>ຕົວຢ່າງ:</b> ເປົ້າ 85 ແລະ WIP ເລີ່ມຕົ້ນ 60 ຈະໄດ້ round(106.25 − 60) = 46 ຊິ້ນ; ຖ້າ WIP ເລີ່ມຕົ້ນ 0 ຈະໄດ້ round(106.25) = 106 ຊິ້ນ.</p>`,
       'formula.load': `<h3>ACTUAL LOAD (ຈຳນວນທີ່ໂຫຼດຈິງ)</h3><p>ຈຳນວນວຽກທີ່ໂຫຼດເຂົ້າສາຍຫຍິບໃນຊ່ວງນັ້ນ. ລະບົບຫຼັງບ້ານຄຳນວນ ໜ້ານີ້ສະແດງຜົນ.</p><p><b>ສີບອກວ່າການໂຫຼດເໝາະສົມບໍ່</b> ໂດຍທຽບກັບ TARGET LOAD.</p><ul><li><span class="hi"><b>ສີສົ້ມ</b></span> = ເກີນ 1.25 ເທົ່າຂອງ TARGET LOAD</li><li><span class="lo"><b>ສີຟ້າ</b></span> = ຕ່ຳກວ່າ TARGET LOAD</li><li>ສີຂາວ = ຢູ່ໃນຊ່ວງທີ່ຍອມຮັບໄດ້</li></ul><p><b>ຕົວຢ່າງ:</b> ຖ້າ WIP ສູງ TARGET LOAD ເທົ່າກັບ 0. ຖ້າຍັງໂຫຼດເພີ່ມ ຄ່ານີ້ຈະເປັນສີສົ້ມ.</p>`,
-      'formula.tgt': `<h3>HOURLY TARGET (ເປົ້າໝາຍລາຍຊົ່ວໂມງ)</h3><p>ເປົ້າພື້ນຖານຂອງຊົ່ວໂມງ <b>ບວກຈຳນວນທີ່ຕ້ອງຕາມໃຫ້ທັນ</b>.</p><p>ຖ້າ QC ຊົ່ວໂມງກ່ອນບໍ່ຮອດເປົ້າ ຈຳນວນທີ່ຂາດຈະຖືກແບ່ງໄປໃສ່ເວລາເຮັດວຽກທີ່ເຫຼືອ.</p><p><b>ຕົວຢ່າງ:</b> ເປົ້າ 75 ແຕ່ QC ໄດ້ 25 ຈຶ່ງຂາດ 50. ເມື່ອເຫຼືອ 7 ຊົ່ວໂມງ ຊ່ວງຕໍ່ໄປຈະໄດ້ເພີ່ມປະມານ 7 ຊິ້ນ ແລະຈຳນວນຈະສູງຂຶ້ນເມື່ອໃກ້ເລີກວຽກ.</p>`,
+      'formula.tgt': `<h3>HOURLY TARGET (ເປົ້າໝາຍລາຍຊົ່ວໂມງ)</h3><p>ເປົ້າພື້ນຖານຂອງຊ່ວງນີ້ ບວກຈຳນວນເພີ່ມທີ່ຄຳນວນຈາກຍອດຂາດສະສົມ ແລະເວລາທີ່ເຫຼືອ. ສູດໃນຕົວຈຳລອງເປັນການປະເມີນ; ສູດ backend ຈິງຍັງບໍ່ຢືນຢັນ.</p><div class="formula-live" id="formulaTargetLive" aria-live="polite"></div>`,
+      'formula.tgt.period': 'ເລືອກຊ່ວງທີ່ຕ້ອງການກວດສອບ', 'formula.tgt.baseBefore': 'ເປົ້າພື້ນຖານສະສົມກ່ອນຊ່ວງ',
+      'formula.tgt.qcBefore': 'QC PASS ສະສົມກ່ອນຊ່ວງ', 'formula.tgt.shortfall': 'ຍອດຂາດສະສົມ',
+      'formula.tgt.extra': 'ຍອດເພີ່ມ', 'formula.tgt.result': 'HOURLY TARGET',
       'formula.qc': `<h3>QC PASS (ວຽກທີ່ຜ່ານກວດ)</h3><p>ຈຳນວນວຽກທີ່ຜ່ານກວດຄຸນນະພາບໃນຊ່ວງນັ້ນ ລວມທັງວຽກແກ້ທີ່ກັບມາຜ່ານ.</p><p><b>ລູກສອນສະແດງຈຳນວນທີ່ຕາມຫຼັງ ຫຼືເກີນເປົ້າສະສົມ:</b> QC ສະສົມ ລົບ ເປົ້າສະສົມ.</p><ul><li>ລູກສອນລົງສີແດງ = ຕາມຫຼັງເປົ້າ</li><li>ລູກສອນຂຶ້ນສີຂຽວ = ເກີນເປົ້າສະສົມ</li><li>ບໍ່ມີລູກສອນ = ເທົ່າກັບເປົ້າ</li></ul><p><b>ຕົວຢ່າງ:</b> QC ສະສົມ 115 ທຽບກັບເປົ້າ 245 ຈະສະແດງ ↓130.</p>`,
       'formula.bal': `<h3>BALANCE WIP (ວຽກຄ້າງໃນສາຍ)</h3><p>ວຽກທີ່ຍັງຢູ່ໃນສາຍຫຍິບ ແລະຍັງບໍ່ຜ່ານ QC.</p><p><b>WIP ຄົງເຫຼືອ = WIP ກ່ອນໜ້າ + ACTUAL LOAD − QC PASS</b></p><p><b>ຕົວຢ່າງ:</b> WIP ເລີ່ມຕົ້ນ 172, ໂຫຼດ 82 ແລະ QC ຜ່ານ 25: 172 + 82 − 25 = <b>229</b> ຊິ້ນ.</p>`,
       'formula.fn': `<h3>SCAN BOX (ວຽກທີ່ສະແກນກ່ອງແລ້ວ)</h3><p>ຈຳນວນວຽກທີ່ສະແກນກ່ອງ ຫຼືສົ່ງຕໍ່ໃນຊ່ວງນັ້ນ.</p><ul><li>ຄ່າເປັນ <b>ສີຂຽວ</b> ເມື່ອສູງກວ່າ HOURLY TARGET.</li><li>ລູກສອນທຽບຈຳນວນສະແກນສະສົມກັບເປົ້າສະສົມ.</li><li>ຄ່ານີ້ບໍ່ນຳໄປຄຳນວນ Balance WIP; ການຄຳນວນນັ້ນໃຊ້ QC PASS.</li></ul>`
@@ -367,7 +383,9 @@
       if (value !== 'dark' && value !== 'light') return;
       document.documentElement.dataset.theme = value;
       localStorage.setItem('wip-theme', value);
-      apply();
+      document.querySelectorAll('input[name="theme"]').forEach(input => {
+        input.checked = input.value === value;
+      });
     }
   };
   apply();

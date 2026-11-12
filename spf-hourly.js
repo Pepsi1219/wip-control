@@ -115,6 +115,25 @@ function clockValue(minutes) {
   return `${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}`;
 }
 
+function periodDuration(label) {
+  const [start, end] = label.split('-').map(time => {
+    const [hour, minute] = time.split(':').map(Number);
+    return hour * 60 + minute;
+  });
+  return end - start;
+}
+
+function distributeBaseTargets(rows, targetPerHour) {
+  let workedMinutes = 0;
+  let previousTarget = 0;
+  rows.forEach(row => {
+    workedMinutes += N(row.m);
+    const cumulativeTarget = Math.round(targetPerHour * workedMinutes / 60);
+    row.b = cumulativeTarget - previousTarget;
+    previousTarget = cumulativeTarget;
+  });
+}
+
 function setPickerMinutes(picker, minutes) {
   const date = new Date(2000, 0, 1, Math.floor(minutes / 60), minutes % 60);
   picker.setDate(date, false);
@@ -148,7 +167,6 @@ function normalizeShiftPickers(changedPicker) {
 
 function makeShiftData(source, start, end, targetPerHour) {
   const previousRows = new Map(source.rows.map(row => [row.l, row]));
-  let workedMinutes = 0;
   const [startHour, startMinute] = start.split(':').map(Number);
   const [endHour, endMinute] = end.split(':').map(Number);
   const startMinutes = startHour * 60 + startMinute;
@@ -161,16 +179,14 @@ function makeShiftData(source, start, end, targetPerHour) {
     const activeStart = Math.max(periodStart, startMinutes);
     const activeEnd = Math.min(periodEnd, endMinutes);
     if (activeEnd <= activeStart) continue;
-    const minutes = Math.min(SHIFT_MINUTES[hour - 8], activeEnd - activeStart);
-    const previousMinutes = workedMinutes;
-    workedMinutes += minutes;
     const label = `${clockValue(activeStart)}-${clockValue(activeEnd)}`;
     const previous = previousRows.get(label) || {};
-    const baseTarget = Math.round(targetPerHour * workedMinutes / 60) - Math.round(targetPerHour * previousMinutes / 60);
+    const requestedMinutes = Number.isFinite(Number(previous.m)) ? Number(previous.m) : SHIFT_MINUTES[hour - 8];
+    const minutes = Math.min(Math.max(0, requestedMinutes), activeEnd - activeStart);
     rows.push({
       l: label,
       m: minutes,
-      b: baseTarget,
+      b: 0,
       load: N(previous.load),
       loadEntered: previous.loadEntered ?? true,
       qc: N(previous.qc),
@@ -180,6 +196,7 @@ function makeShiftData(source, start, end, targetPerHour) {
     });
   }
 
+  distributeBaseTargets(rows, targetPerHour);
   return { open: N(source.open), rows };
 }
 
@@ -271,12 +288,28 @@ function build() {
     tb.appendChild(tr);
   });
   $$('td[data-c]').forEach(td => { cells[td.dataset.i + '_' + td.dataset.c] = td; });
-  $('#setRows').innerHTML = S.rows.map(row => `<tr><td>${row.l}</td><td>${f(row.m)}</td><td>${f(row.b)}</td></tr>`).join('');
-  $('#setMinutesTotal').textContent = f(S.rows.reduce((total, row) => total + N(row.m), 0));
-  $('#setBaseTotal').textContent = f(S.rows.reduce((total, row) => total + N(row.b), 0));
+  const t = window.WIP_I18N.t;
+  $('#setRows').innerHTML = S.rows.map((row, i) => `<tr><td>${row.l}</td><td><input class="schedule-minute-input" type="number" min="0" max="${periodDuration(row.l)}" step="1" value="${N(row.m)}" data-schedule-minute="${i}" aria-label="${t('schedule.minutesFor', { period: row.l })}"></td><td>${f(row.b)}</td></tr>`).join('');
+  syncScheduleTable();
   $('#lessonPeriod').innerHTML = S.rows.map((r, i) => `<option value="${i}">${r.l}</option>`).join('');
   lessonRow = Math.min(lessonRow, S.rows.length - 1);
   $('#lessonPeriod').value = String(lessonRow);
+}
+function syncScheduleTable() {
+  const minutesTotal = S.rows.reduce((total, row) => total + N(row.m), 0);
+  const baseTotal = S.rows.reduce((total, row) => total + N(row.b), 0);
+  S.rows.forEach((row, i) => {
+    const input = $(`input[data-schedule-minute="${i}"]`);
+    if (input) {
+      input.max = String(periodDuration(row.l));
+      input.setAttribute('aria-label', window.WIP_I18N.t('schedule.minutesFor', { period: row.l }));
+      if (document.activeElement !== input) input.value = String(N(row.m));
+    }
+    const baseCell = $('#setRows').rows[i]?.cells[2];
+    if (baseCell) baseCell.textContent = f(row.b);
+  });
+  $('#setMinutesTotal').textContent = f(minutesTotal);
+  $('#setBaseTotal').textContent = f(baseTotal);
 }
 function syncInputs() {
   S.rows.forEach((r, i) => {
@@ -353,6 +386,7 @@ function selectLessonCell(R) {
 }
 function update() {
   const R = calc();
+  syncScheduleTable();
   const shownCount = visibleRowCount();
   R.rows.forEach(x => {
     const i = x.i, g = c => cells[i + '_' + c];
@@ -396,6 +430,24 @@ function update() {
 }
 
 function td(i, c) { return cells[i + '_' + c]; }
+function renderFormulaTarget(R) {
+  const live = $('#formulaTargetLive');
+  if (!live) return;
+  const t = window.WIP_I18N.t;
+  const rowIndex = sel.c === 'tgt' && sel.i >= 0 ? sel.i : Math.max(0, Math.min(lessonRow, R.rows.length - 1));
+  const x = R.rows[rowIndex], row = S.rows[rowIndex];
+  const options = S.rows.map((item, index) => `<option value="${index}"${index === rowIndex ? ' selected' : ''}>${item.l}</option>`).join('');
+  const extraFormula = x.remain > 0
+    ? `round(${f(x.shortfall)} × ${f(x.m)} ÷ ${f(x.remain)}) = round(${f(x.raw)}) = ${f(x.extra)}`
+    : t('lesson.noTime');
+  live.innerHTML = `<label for="formulaTargetPeriod">${t('formula.tgt.period')}<select id="formulaTargetPeriod">${options}</select></label>
+    <p><b>${t('schedule.baseTarget')} ${row.l}:</b> ${f(x.b)}</p>
+    <p><b>${t('formula.tgt.baseBefore')}:</b> ${f(x.cumBBefore)}</p>
+    <p><b>${t('formula.tgt.qcBefore')}:</b> ${f(x.cumQBefore)}</p>
+    <p><b>${t('formula.tgt.shortfall')}:</b> max(0, ${f(x.cumBBefore)} − ${f(x.cumQBefore)}) = ${f(x.shortfall)}</p>
+    <p><b>${t('formula.tgt.extra')}:</b> ${extraFormula}</p>
+    <p><b>${t('formula.tgt.result')}:</b> ${f(x.b)} + ${f(x.extra)} = ${f(x.target)}</p>`;
+}
 function paint(R) {
   $$('.sel').forEach(e => e.classList.remove('sel'));
   $$('.dep').forEach(e => e.classList.remove('dep'));
@@ -414,6 +466,7 @@ function paint(R) {
   $$('.formula-summary-item').forEach(item => {
     item.hidden = item.dataset.formula !== c;
   });
+  renderFormulaTarget(R);
   $('#side').scrollTop = 0;
 }
 function explain(R, i, c) {
@@ -490,6 +543,17 @@ function explainSum(R, c) {
 
 document.addEventListener('input', e => {
   const t = e.target;
+  if (t.matches('input[data-schedule-minute]')) {
+    const rowIndex = Number(t.dataset.scheduleMinute);
+    const maxMinutes = periodDuration(S.rows[rowIndex].l);
+    const minutes = Math.min(maxMinutes, Math.max(0, Math.round(N(t.value))));
+    t.value = String(minutes);
+    S.rows[rowIndex].m = minutes;
+    distributeBaseTargets(S.rows, N($('#targetPerHour').value));
+    clearScenarioSelectionForManualEdit();
+    update();
+    return;
+  }
   if (t.matches('input.cell-slider')) {
     const valueInput = t.previousElementSibling;
     valueInput.value = t.value;
@@ -509,6 +573,12 @@ document.addEventListener('input', e => {
     clearScenarioSelectionForManualEdit();
     update();
   }
+});
+document.addEventListener('change', e => {
+  if (e.target.id !== 'formulaTargetPeriod') return;
+  lessonRow = Number(e.target.value);
+  sel = { i: lessonRow, c: 'tgt' };
+  update();
 });
 $('#shiftStart').addEventListener('change', () => updateShiftSettings(shiftStartPicker));
 $('#shiftEnd').addEventListener('change', () => updateShiftSettings(shiftEndPicker));

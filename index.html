@@ -11,6 +11,7 @@
 <header>
   <h1 data-i18n="page.title">ตาราง WIP Control Monitoring ทำงานอย่างไร</h1>
   <div class="header-controls">
+    <button id="bGame" class="game-launch" type="button" data-i18n="game.open">Game</button>
     <label class="language-control" for="languageSelect">
       <select id="languageSelect" aria-label="ภาษา" data-i18n-aria="settings.language"><option value="th">ไทย</option><option value="en">English</option><option value="vi">Tiếng Việt</option><option value="lo">ລາວ</option></select>
     </label>
@@ -173,6 +174,52 @@
   </div>
  
 </section>
+
+<main id="gameScreen" class="game-screen" aria-labelledby="gameTitle" hidden>
+  <div class="game-topbar">
+    <button id="gameExit" class="game-icon-button" type="button" aria-label="กลับหน้าหลัก" data-i18n-aria="game.exit" title="กลับหน้าหลัก" data-i18n-title="game.exit"><span aria-hidden="true">&#8592;</span></button>
+    <div class="game-brand"><span class="game-kicker" data-i18n="game.kicker">WIP CONTROL / TRAINING MODE</span><h1 id="gameTitle" data-i18n="game.title">SHIFT SPRINT</h1></div>
+    <div class="game-top-controls">
+      <div id="gameTimer" class="game-timer" role="timer" aria-live="off">05:00</div>
+      <button id="gameStart" class="game-primary-button" type="button" data-i18n="game.start">เริ่มเกม</button>
+      <button id="gameSettingsOpen" class="game-settings-button" type="button"><span aria-hidden="true">&#9881;</span><span data-i18n="game.settings">ตั้งค่าเกม</span></button>
+      <button id="gameFinish" class="game-secondary-button" type="button" data-i18n="game.finish" hidden>ส่งคำตอบ</button>
+    </div>
+  </div>
+  <dialog id="gameSettingsDialog" class="game-settings-dialog">
+    <form id="gameSettingsForm">
+      <div class="game-settings-heading"><div><span class="game-kicker" data-i18n="game.kicker">WIP CONTROL / TRAINING MODE</span><h2 data-i18n="game.settings">ตั้งค่าเกม</h2></div><button id="gameSettingsClose" class="game-icon-button" type="button" aria-label="ปิด" data-i18n-aria="game.closeSettings">&#215;</button></div>
+      <div class="game-settings-fields">
+        <label for="gameOpeningWip"><span data-i18n="settings.wip">WIP เริ่มต้น</span><input id="gameOpeningWip" type="number" min="0" max="1000000" step="1" required></label>
+        <label for="gameTargetPerHour"><span data-i18n="settings.hourlyTarget">เป้าหมายต่อชั่วโมง</span><input id="gameTargetPerHour" type="number" min="1" max="1000000" step="1" required></label>
+        <label for="gameShiftStart"><span data-i18n="settings.shiftStart">เวลาเริ่มงาน</span><input id="gameShiftStart" type="time" min="08:00" max="20:55" required></label>
+        <label for="gameShiftEnd"><span data-i18n="settings.shiftEnd">เวลาเลิกงาน</span><input id="gameShiftEnd" type="time" min="08:05" max="21:00" required></label>
+        <label for="gameDurationSetting"><span data-i18n="game.duration">เวลาเล่น</span><span class="game-duration-input"><input id="gameDurationSetting" type="number" min="1" max="30" step="1" value="5" required><span data-i18n="game.minutes">นาที</span></span></label>
+      </div>
+      <p id="gameSettingsError" class="game-settings-error" role="alert" hidden data-i18n="game.shiftError">เวลาเลิกงานต้องอยู่หลังเวลาเริ่มงาน</p>
+      <div class="game-settings-actions"><button id="gameSettingsCancel" class="game-secondary-button" type="button" data-i18n="game.cancel">ยกเลิก</button><button class="game-primary-button" type="submit" data-i18n="game.applySettings">ใช้ค่านี้</button></div>
+    </form>
+  </dialog>
+  <div class="game-facts" id="gameFacts"></div>
+  <div class="game-progress-row">
+    <p id="gameStatus" data-i18n="game.ready">อ่านข้อมูลในตาราง แล้วกรอกค่าที่ต้องคำนวณ</p>
+    <div class="game-progress-track" aria-hidden="true"><span id="gameProgress"></span></div>
+    <span id="gameProgressText" class="game-progress-text">0 / 0</span>
+  </div>
+  <section id="gameResult" class="game-result" aria-live="polite" hidden></section>
+  <dialog id="gameAnswerDialog" class="game-answer-dialog" aria-labelledby="gameAnswerTitle">
+    <div class="game-answer-dialog-content">
+      <button id="gameAnswerClose" class="game-icon-button game-answer-close" type="button" aria-label="ปิด" data-i18n-aria="game.closeSettings">&#215;</button>
+      <p id="gameAnswerPeriod" class="game-answer-period"></p>
+      <h2 id="gameAnswerTitle"></h2>
+      <div id="gameAnswerDetails"></div>
+    </div>
+  </dialog>
+  <section class="game-table-shell" aria-label="เกมคำนวณ Hourly Output" data-i18n-aria="game.tableLabel">
+    <div class="game-table-heading"><span data-i18n="game.tableTitle">HOURLY OUTPUT</span><span id="gameRoundLabel"></span><span class="game-table-hint" data-i18n="game.hint">กรอกช่องสีเหลืองให้ครบก่อนหมดเวลา</span></div>
+    <div id="gameTableSlot" class="game-table-slot"></div>
+  </section>
+</main>
  
 <script src="demo-data.js"></script>
 <script src="i18n"></script>

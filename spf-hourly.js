@@ -6,6 +6,11 @@ let demoSnapshot = null;
 let sel = { i: 0, c: 'tgt' };
 let lessonStep = 1;
 let lessonRow = 0;
+let gameSession = null;
+let gameSnapshot = null;
+let gameTimerId = null;
+let gameSettings = null;
+let gameIsOpen = false;
 const $ = s => document.querySelector(s);
 const $$ = s => [...document.querySelectorAll(s)];
 const f = x => Number(x).toLocaleString('en-US', { maximumFractionDigits: 1 });
@@ -16,6 +21,7 @@ const N = v => {
 const MAX_VALUE_SLIDER_LIMIT = 1000000;
 localStorage.removeItem('wip-slider-max');
 const STORAGE_KEY = 'spf-hourly-saved-state';
+const GAME_STORAGE_KEY = 'spf-hourly-game-session';
 let saveFeedbackTimer;
 
 function readSavedSnapshot() {
@@ -44,6 +50,57 @@ function readSavedSnapshot() {
   } catch {
     return null;
   }
+}
+
+function readSavedGameState() {
+  try {
+    const saved = JSON.parse(localStorage.getItem(GAME_STORAGE_KEY));
+    const session = saved?.session;
+    const rows = session?.challenge?.rows;
+    const settings = saved?.settings;
+    if (saved?.version !== 1 || !session || !settings || !Array.isArray(rows) || !rows.length) return null;
+    if (!Array.isArray(session.entries) || session.entries.length !== rows.length || !Array.isArray(session.answers) || session.answers.length !== rows.length) return null;
+    if (!Number.isInteger(session.currentRow) || session.currentRow < 0 || session.currentRow >= rows.length) return null;
+    if (!Number.isFinite(Number(session.challenge.open)) || !Number.isFinite(Number(session.targetPerHour))) return null;
+    if (!Number.isFinite(Number(settings.openingWip)) || !Number.isFinite(Number(settings.targetPerHour)) || !Number.isFinite(Number(settings.duration))) return null;
+    if (!/^\d{2}:\d{2}$/.test(settings.shiftStart) || !/^\d{2}:\d{2}$/.test(settings.shiftEnd) || settings.shiftEnd <= settings.shiftStart) return null;
+    if (rows.some(row => !row || typeof row.l !== 'string' || !['m', 'b', 'load', 'qc', 'fn'].every(key => Number.isFinite(Number(row[key]))))) return null;
+    const answerFields = ['tl', 'tgt', 'bal'];
+    if (session.entries.some(entry => !entry || answerFields.some(field => entry[field] !== null && !Number.isFinite(Number(entry[field]))))) return null;
+    if (session.answers.some(answer => !answer || answerFields.some(field => !Number.isFinite(Number(answer[field]))))) return null;
+    if (session.started && !session.finished && !Number.isFinite(Number(session.endsAt)) && !Number.isFinite(Number(session.remainingSeconds))) return null;
+
+    const mainSnapshot = saved.mainSnapshot;
+    const validMainSnapshot = Boolean(
+      mainSnapshot?.state && Array.isArray(mainSnapshot.state.rows) && mainSnapshot.state.rows.length &&
+      Array.isArray(mainSnapshot.activeScenarios) &&
+      Number.isFinite(Number(mainSnapshot.shiftStart)) && Number.isFinite(Number(mainSnapshot.shiftEnd)) &&
+      Number.isFinite(Number(mainSnapshot.targetPerHour)) && Number.isFinite(Number(mainSnapshot.valueSliderLimit)) &&
+      Number.isInteger(mainSnapshot.lessonRow) && Number.isInteger(mainSnapshot.lessonStep) &&
+      mainSnapshot.selection && typeof mainSnapshot.selection.c === 'string'
+    );
+    return {
+      session,
+      settings,
+      isOpen: Boolean(saved.isOpen && validMainSnapshot),
+      mainSnapshot: validMainSnapshot ? mainSnapshot : null
+    };
+  } catch {
+    return null;
+  }
+}
+
+function saveGameSession() {
+  if (!gameSession || !gameSettings) return;
+  try {
+    localStorage.setItem(GAME_STORAGE_KEY, JSON.stringify({
+      version: 1,
+      isOpen: gameIsOpen,
+      mainSnapshot: gameIsOpen ? gameSnapshot : null,
+      settings: gameSettings,
+      session: gameSession
+    }));
+  } catch {}
 }
 
 let valueSliderLimit = 200;
@@ -385,6 +442,7 @@ function selectLessonCell(R) {
   paint(R);
 }
 function update() {
+  if (gameIsOpen && gameSession) { renderGameBoard(); return; }
   const R = calc();
   syncScheduleTable();
   const shownCount = visibleRowCount();
@@ -602,6 +660,7 @@ $$('input[name="theme"]').forEach(input => input.addEventListener('change', e =>
   if (e.target.checked) window.WIP_I18N.setTheme(e.target.value);
 }));
 function pick(e) {
+  if (gameIsOpen) return;
   const c = e.target.closest('td[data-c]');
   if (c) {
     sel = { i: +c.dataset.i, c: c.dataset.c };
@@ -839,3 +898,495 @@ if ('ResizeObserver' in window) {
   window.addEventListener('resize', syncSideHeight);
 }
 syncSideHeight();
+
+function randomInt(min, max) {
+  return Math.floor(Math.random() * (max - min + 1)) + min;
+}
+function createGameChallenge(settings) {
+  const [startHour, startMinute] = settings.shiftStart.split(':').map(Number);
+  const [endHour, endMinute] = settings.shiftEnd.split(':').map(Number);
+  const start = startHour * 60 + startMinute;
+  const end = endHour * 60 + endMinute;
+  const open = settings.openingWip;
+  const targetPerHour = settings.targetPerHour;
+  const challenge = makeShiftData({ open, rows: [] }, clockValue(start), clockValue(end), targetPerHour);
+  let runningWip = open;
+  challenge.rows.forEach(row => {
+    const maxLoad = Math.max(15, Math.round(targetPerHour * 1.35));
+    row.load = randomInt(Math.min(maxLoad, Math.max(15, Math.round(targetPerHour * 0.45))), maxLoad);
+    const available = runningWip + row.load;
+    row.qc = randomInt(Math.max(0, Math.round(targetPerHour * 0.2)), Math.min(available, Math.round(targetPerHour * 1.15)));
+    row.fn = randomInt(0, Math.round(targetPerHour * 1.25));
+    row.loadEntered = row.qcEntered = row.fnEntered = true;
+    runningWip = available - row.qc;
+  });
+  return { challenge, start, end, targetPerHour };
+}
+function gameText(key, values) {
+  return window.WIP_I18N.t(key, values);
+}
+function gameDurationSeconds() {
+  return gameSettings.duration * 60;
+}
+function formatGameClock(seconds) {
+  const safeSeconds = Math.max(0, seconds);
+  return `${String(Math.floor(safeSeconds / 60)).padStart(2, '0')}:${String(safeSeconds % 60).padStart(2, '0')}`;
+}
+function updateGameFacts() {
+  if (!gameSession) return;
+  const { challenge, start, end, targetPerHour } = gameSession;
+  const startText = clockValue(start), endText = clockValue(end);
+  $('#gameFacts').innerHTML = [
+    ['settings.wip', `${f(challenge.open)} ${gameText('common.pieces')}`],
+    ['settings.hourlyTarget', `${f(targetPerHour)} ${gameText('common.pieces')}`],
+    ['settings.shiftStart', startText],
+    ['settings.shiftEnd', endText]
+  ].map(([label, value]) => `<div class="game-fact"><span>${gameText(label)}</span><strong>${value}</strong></div>`).join('');
+  $('#gameRoundLabel').textContent = gameText('game.periodCount', { count: challenge.rows.length });
+}
+function gameFieldInput(rowIndex, field, value, locked, explainable = false) {
+  const valueText = value === null ? '' : String(value);
+  const lockAttribute = explainable ? 'readonly aria-haspopup="dialog"' : locked ? 'disabled' : '';
+  return `<input class="game-answer-input" type="number" min="0" step="1" inputmode="numeric" data-game-field="${field}" data-game-row="${rowIndex}" aria-label="${gameText(`metric.${field === 'tl' ? 'tl' : field === 'tgt' ? 'tgt' : 'bal'}`)} ${gameText('common.row')} ${rowIndex + 1}" placeholder="?" value="${valueText}" ${lockAttribute}>`;
+}
+function updateGameSummary() {
+  const visibleCount = gameSession.finished ? gameSession.entries.length : gameSession.currentRow + 1;
+  const visibleEntries = gameSession.entries.slice(0, visibleCount);
+  const sumField = field => {
+    const values = visibleEntries.map(entry => entry[field]).filter(value => value !== null);
+    return values.length ? f(values.reduce((sum, value) => sum + value, 0)) : '—';
+  };
+  cells['-1_tl'].textContent = sumField('tl');
+  cells['-1_tgt'].textContent = sumField('tgt');
+  const lastBalance = [...visibleEntries].reverse().find(entry => entry.bal !== null);
+  cells['-1_bal'].textContent = lastBalance ? f(lastBalance.bal) : '—';
+  ['load', 'qc', 'fn'].forEach(field => {
+    const total = S.rows.slice(0, visibleCount).reduce((sum, row) => sum + N(row[field]), 0);
+    cells[`-1_${field}`].textContent = f(total);
+  });
+}
+function updateGameProgress() {
+  let answered = 0;
+  const totalAnswers = gameSession.entries.length * 3;
+  gameSession.entries.forEach(entry => {
+    ['tl', 'tgt', 'bal'].forEach(field => { if (entry[field] !== null) answered++; });
+  });
+  $('#gameProgress').style.width = `${totalAnswers ? answered / totalAnswers * 100 : 0}%`;
+  $('#gameProgressText').textContent = `${answered} / ${totalAnswers}`;
+  $('#tbl').tFoot.hidden = false;
+}
+function advanceGameHourWhenComplete() {
+  const currentEntry = gameSession.entries[gameSession.currentRow];
+  if (!['tl', 'tgt', 'bal'].every(field => currentEntry[field] !== null)) return false;
+  if (gameSession.currentRow === gameSession.entries.length - 1) {
+    $('#gameStatus').textContent = gameText('game.allComplete');
+    return false;
+  }
+  gameSession.currentRow++;
+  renderGameBoard();
+  $(`input[data-game-row="${gameSession.currentRow}"][data-game-field="tl"]`)?.focus({ preventScroll: true });
+  return true;
+}
+function commitGameAnswer(input) {
+  if (!gameSession || !gameSession.started || gameSession.finished) return false;
+  const row = Number(input.dataset.gameRow), field = input.dataset.gameField;
+  const value = input.value === '' ? null : Math.max(0, Math.round(N(input.value)));
+  gameSession.entries[row][field] = value;
+  input.value = value === null ? '' : String(value);
+  updateGameSummary();
+  const advanced = advanceGameHourWhenComplete();
+  if (!advanced) updateGameProgress();
+  saveGameSession();
+  return advanced;
+}
+function renderGameBoard() {
+  if (!gameSession) return;
+  const result = calc();
+  const locked = !gameSession.started || gameSession.finished;
+  result.rows.forEach((row, index) => {
+    const entry = gameSession.entries[index];
+    const unrevealed = !gameSession.finished && index > gameSession.currentRow;
+    const rowElement = cells[`${index}_tl`]?.parentElement;
+    if (rowElement) {
+      rowElement.hidden = false;
+      rowElement.classList.toggle('game-row-unrevealed', unrevealed);
+      rowElement.inert = false;
+      rowElement.setAttribute('aria-hidden', 'false');
+    }
+    const output = {
+      tl: row.tl,
+      tgt: row.target,
+      bal: row.bal,
+      load: row.load,
+      qc: row.qc,
+      fn: row.fn
+    };
+    ['tl', 'tgt', 'bal', 'load', 'qc', 'fn'].forEach(field => {
+      const cell = cells[`${index}_${field}`];
+      if (!cell) return;
+      if (unrevealed) {
+        cell.replaceChildren();
+        return;
+      }
+      if (field === 'tl' || field === 'tgt' || field === 'bal') {
+        const answer = gameSession.answers[index][field];
+        let feedback = '';
+        let inputClass = '';
+        if (gameSession.finished) {
+          const difference = Math.abs((entry[field] ?? NaN) - answer);
+          const grade = difference === 0 ? 'is-correct' : difference <= 1 ? 'is-close' : 'is-wrong';
+          inputClass = difference === 0 ? 'game-correct' : difference <= 1 ? 'game-close' : 'game-wrong';
+          feedback = `<small class="game-answer-feedback ${grade}">${gameText(difference === 0 ? 'game.correct' : difference <= 1 ? 'game.close' : 'game.answer', { answer: f(answer) })}</small>`;
+        }
+        const explainable = gameSession.finished;
+        cell.innerHTML = gameFieldInput(index, field, entry[field], locked || index !== gameSession.currentRow, explainable).replace('game-answer-input"', `game-answer-input ${inputClass}"`) + feedback;
+      } else {
+        cell.innerHTML = `<span class="game-given">${f(output[field])}</span>`;
+      }
+    });
+  });
+  updateGameSummary();
+  updateGameProgress();
+  updateGameFacts();
+}
+function refreshGameTimer() {
+  if (!gameSession || !gameSession.started || gameSession.finished) return;
+  const remaining = Math.max(0, Math.ceil((gameSession.endsAt - Date.now()) / 1000));
+  gameSession.remainingSeconds = remaining;
+  $('#gameTimer').textContent = formatGameClock(remaining);
+  $('#gameTimer').classList.toggle('is-urgent', remaining <= 30);
+  if (remaining === 0) finishGame();
+}
+function startGame() {
+  if (!gameSession || gameSession.finished) return;
+  const seconds = gameDurationSeconds();
+  gameSession.started = true;
+  gameSession.remainingSeconds = seconds;
+  $('#gameStart').hidden = true;
+  $('#gameFinish').hidden = false;
+  $('#gameSettingsOpen').disabled = true;
+  $('#gameStatus').textContent = gameText('game.playing');
+  renderGameBoard();
+  resumeGameTimer();
+}
+function resumeGameTimer() {
+  if (!gameSession?.started || gameSession.finished) return;
+  if (!gameSession.endsAt) {
+    const remaining = Math.max(0, Math.ceil(gameSession.remainingSeconds ?? gameDurationSeconds()));
+    gameSession.endsAt = Date.now() + remaining * 1000;
+  }
+  refreshGameTimer();
+  if (!gameSession.finished && !gameTimerId) gameTimerId = setInterval(refreshGameTimer, 250);
+  saveGameSession();
+}
+function finishGame() {
+  if (!gameSession || gameSession.finished) return;
+  gameSession.finished = true;
+  gameSession.started = true;
+  gameSession.remainingSeconds = Math.max(0, Math.ceil((gameSession.endsAt - Date.now()) / 1000));
+  gameSession.endsAt = null;
+  gameSession.currentRow = gameSession.entries.length - 1;
+  clearInterval(gameTimerId);
+  gameTimerId = null;
+  let points = 0;
+  const total = gameSession.entries.length * 3;
+  gameSession.entries.forEach((entry, index) => {
+    ['tl', 'tgt', 'bal'].forEach(field => {
+      const difference = Math.abs((entry[field] ?? NaN) - gameSession.answers[index][field]);
+      if (difference === 0) points += 1;
+      else if (difference <= 1) points += 0.5;
+    });
+  });
+  const maxPoints = total;
+  const accuracy = total ? Math.round(points / maxPoints * 100) : 0;
+  const rank = accuracy >= 90 ? 'game.rankTop' : accuracy >= 70 ? 'game.rankGood' : accuracy >= 45 ? 'game.rankWarm' : 'game.rankTry';
+  $('#gameTimer').textContent = formatGameClock(gameSession.remainingSeconds);
+  $('#gameTimer').classList.remove('is-urgent');
+  $('#gameStatus').textContent = gameText('game.done');
+  $('#gameStart').hidden = true;
+  $('#gameFinish').hidden = true;
+  $('#gameSettingsOpen').disabled = false;
+  gameSession.result = { points, maxPoints, accuracy, rank };
+  if (gameIsOpen) {
+    renderGameResult();
+    renderGameBoard();
+  }
+  saveGameSession();
+}
+function renderGameResult() {
+  if (!gameSession?.result) return;
+  const { points, maxPoints, accuracy, rank } = gameSession.result;
+  $('#gameResult').innerHTML = `<div class="game-result-score">${f(points)}<small> / ${maxPoints}</small></div><div class="game-result-copy"><strong>${gameText(rank)}</strong><span>${gameText('game.resultSummary', { accuracy })}</span></div><button id="gameReplay" class="game-primary-button" type="button">${gameText('game.replay')}</button>`;
+  $('#gameResult').hidden = false;
+  $('#gameReplay').addEventListener('click', createGameSession);
+}
+function createGameSession() {
+  const generated = createGameChallenge(gameSettings);
+  S = generated.challenge;
+  gameSession = {
+    ...generated,
+    started: false,
+    finished: false,
+    remainingSeconds: gameDurationSeconds(),
+    currentRow: 0,
+    entries: S.rows.map(() => ({ tl: null, tgt: null, bal: null })),
+    answers: []
+  };
+  gameSession.answers = calc().rows.map(row => ({ tl: row.tl, tgt: row.target, bal: row.bal }));
+  $('#gameResult').hidden = true;
+  $('#gameResult').innerHTML = '';
+  $('#gameSettingsOpen').disabled = false;
+  $('#gameTimer').textContent = formatGameClock(gameDurationSeconds());
+  $('#gameTimer').classList.remove('is-urgent');
+  $('#gameStart').hidden = false;
+  $('#gameFinish').hidden = true;
+  $('#gameStatus').textContent = gameText('game.ready');
+  build();
+  renderGameBoard();
+  saveGameSession();
+}
+function openGame() {
+  if (gameIsOpen) return;
+  if (!gameSnapshot) gameSnapshot = captureMainSnapshot();
+  if (!gameSession) {
+    gameSettings = {
+      openingWip: N(S.open),
+      targetPerHour: Math.max(1, N($('#targetPerHour').value)),
+      shiftStart: clockValue(pickerMinutes(shiftStartPicker)),
+      shiftEnd: clockValue(pickerMinutes(shiftEndPicker)),
+      duration: 5
+    };
+  }
+  gameIsOpen = true;
+  $('header').hidden = true;
+  $('.wrap').hidden = true;
+  $('.lower').hidden = true;
+  $('#gameScreen').hidden = false;
+  $('#gameTableSlot').appendChild(tableCard);
+  if (!gameSession) {
+    createGameSession();
+    $('#gameStart').focus();
+    return;
+  }
+  S = gameSession.challenge;
+  build();
+  $('#gameStart').hidden = gameSession.started || gameSession.finished;
+  $('#gameFinish').hidden = !gameSession.started || gameSession.finished;
+  $('#gameSettingsOpen').disabled = gameSession.started && !gameSession.finished;
+  $('#gameResult').hidden = !gameSession.finished;
+  if (gameSession.finished) renderGameResult();
+  renderGameBoard();
+  if (gameSession.started && !gameSession.finished) resumeGameTimer();
+  saveGameSession();
+}
+function captureMainSnapshot() {
+  return {
+    state: JSON.parse(JSON.stringify(S)),
+    scenarioBase: JSON.parse(JSON.stringify(scenarioBase)),
+    activeScenarios: [...activeScenarios],
+    demoSnapshot: demoSnapshot ? JSON.parse(JSON.stringify(demoSnapshot)) : null,
+    shiftStart: pickerMinutes(shiftStartPicker),
+    shiftEnd: pickerMinutes(shiftEndPicker),
+    targetPerHour: $('#targetPerHour').value,
+    displayAllHours: $('#displayAllHours').checked,
+    valueSliderLimit,
+    lowerHidden: $('.lower').hidden,
+    lessonRow,
+    lessonStep,
+    selection: { ...sel }
+  };
+}
+function restoreMainSnapshot(snapshot) {
+  S = snapshot.state;
+  scenarioBase = snapshot.scenarioBase;
+  activeScenarios.clear();
+  snapshot.activeScenarios.forEach(id => activeScenarios.add(id));
+  demoSnapshot = snapshot.demoSnapshot;
+  setPickerMinutes(shiftStartPicker, snapshot.shiftStart);
+  setPickerMinutes(shiftEndPicker, snapshot.shiftEnd);
+  $('#targetPerHour').value = snapshot.targetPerHour;
+  $('#displayAllHours').checked = snapshot.displayAllHours;
+  valueSliderLimit = snapshot.valueSliderLimit;
+  $('#valueSliderMaxSetting').value = String(valueSliderLimit);
+  $('.lower').hidden = snapshot.lowerHidden ?? true;
+  lessonRow = snapshot.lessonRow;
+  lessonStep = snapshot.lessonStep;
+  sel = snapshot.selection;
+}
+function closeGame() {
+  if (!gameIsOpen) return;
+  gameIsOpen = false;
+  $('#gameScreen').hidden = true;
+  $('.table-column').appendChild(tableCard);
+  $('header').hidden = false;
+  $('.wrap').hidden = false;
+  if (gameSnapshot) {
+    restoreMainSnapshot(gameSnapshot);
+  } else {
+    $('.lower').hidden = true;
+  }
+  gameSnapshot = null;
+  tableCard.classList.remove('game-table-card');
+  build();
+  updateScenarioButtons();
+  update();
+  $('#bGame').focus();
+  saveGameSession();
+}
+$('#bGame').addEventListener('click', openGame);
+$('#gameExit').addEventListener('click', closeGame);
+$('#gameStart').addEventListener('click', startGame);
+$('#gameFinish').addEventListener('click', finishGame);
+function openGameSettings() {
+  if (!gameSession || gameSession.started && !gameSession.finished) return;
+  $('#gameOpeningWip').value = String(gameSettings.openingWip);
+  $('#gameTargetPerHour').value = String(gameSettings.targetPerHour);
+  $('#gameShiftStart').value = gameSettings.shiftStart;
+  $('#gameShiftEnd').value = gameSettings.shiftEnd;
+  $('#gameDurationSetting').value = String(gameSettings.duration);
+  $('#gameSettingsError').hidden = true;
+  $('#gameSettingsDialog').showModal();
+}
+$('#gameSettingsOpen').addEventListener('click', openGameSettings);
+$('#gameSettingsClose').addEventListener('click', () => $('#gameSettingsDialog').close());
+$('#gameSettingsCancel').addEventListener('click', () => $('#gameSettingsDialog').close());
+$('#gameSettingsForm').addEventListener('submit', event => {
+  event.preventDefault();
+  const form = event.currentTarget;
+  if (!form.reportValidity()) return;
+  const start = $('#gameShiftStart').value;
+  const end = $('#gameShiftEnd').value;
+  if (end <= start) {
+    $('#gameSettingsError').hidden = false;
+    $('#gameShiftEnd').focus();
+    return;
+  }
+  gameSettings = {
+    openingWip: Math.round(N($('#gameOpeningWip').value)),
+    targetPerHour: Math.round(N($('#gameTargetPerHour').value)),
+    shiftStart: start,
+    shiftEnd: end,
+    duration: Math.round(N($('#gameDurationSetting').value))
+  };
+  $('#gameSettingsDialog').close();
+  createGameSession();
+});
+document.addEventListener('input', event => {
+  const input = event.target.closest('input[data-game-field]');
+  if (!input || !gameSession || !gameSession.started || gameSession.finished) return;
+  const row = Number(input.dataset.gameRow), field = input.dataset.gameField;
+  gameSession.entries[row][field] = input.value === '' ? null : Math.max(0, Math.round(N(input.value)));
+  updateGameSummary();
+  updateGameProgress();
+  saveGameSession();
+});
+document.addEventListener('change', event => {
+  const input = event.target.closest('input[data-game-field]');
+  if (!input || !gameSession || !gameSession.started || gameSession.finished) return;
+  commitGameAnswer(input);
+});
+document.addEventListener('keydown', event => {
+  const input = event.target.closest('input[data-game-field]');
+  if (input && gameSession?.finished && (event.key === 'Enter' || event.key === ' ')) {
+    event.preventDefault();
+    openGameAnswerExplanation(input);
+    return;
+  }
+  if (input && event.key === 'Enter' && gameSession?.started && !gameSession.finished) {
+    event.preventDefault();
+    const row = Number(input.dataset.gameRow), field = input.dataset.gameField;
+    const advanced = commitGameAnswer(input);
+    if (!advanced && gameSession.currentRow === row) {
+      const currentEntry = gameSession.entries[row];
+      const nextField = ['tl', 'tgt', 'bal'].find(candidate => currentEntry[candidate] === null);
+      if (nextField) $(`input[data-game-row="${row}"][data-game-field="${nextField}"]`)?.focus({ preventScroll: true });
+    }
+    return;
+  }
+  if (!gameIsOpen || event.key !== 'Escape') return;
+  if ($('#gameAnswerDialog').open || $('#gameSettingsDialog').open) return;
+  closeGame();
+});
+function openGameAnswerExplanation(input) {
+  if (!gameSession?.finished || !input.matches('.game-correct, .game-wrong, .game-close')) return;
+  const rowIndex = Number(input.dataset.gameRow), field = input.dataset.gameField;
+  const row = calc().rows[rowIndex];
+  const answer = gameSession.answers[rowIndex][field];
+  const userValue = gameSession.entries[rowIndex][field];
+  const isCorrect = userValue !== null && userValue === answer;
+  let formula, calculation, reason;
+  if (field === 'tl') {
+    const first = rowIndex === 0;
+    formula = gameText(first ? 'game.explain.tlFirst' : 'game.explain.tl');
+    const balanceLabel = gameText(first ? 'game.explain.openingWip' : 'game.explain.balanceBefore');
+    const gap = Math.max(0, row.target - row.balBefore);
+    calculation = first
+      ? [
+          `${gameText('metric.tgt')}: ${f(row.target)}`,
+          `${balanceLabel}: ${f(row.balBefore)}`,
+          `${gameText('game.explain.targetWip')}: ${f(row.target)} × 1.25 = ${f(row.target * 1.25)}`,
+          `${gameText('metric.tl')}: round(max(0, ${f(row.target * 1.25)} − ${f(row.balBefore)})) = ${f(answer)}`
+        ].join('\n')
+      : [
+          `${gameText('metric.tgt')}: ${f(row.target)}`,
+          `${balanceLabel}: ${f(row.balBefore)}`,
+          `${gameText('game.explain.gap')}: max(0, ${f(row.target)} − ${f(row.balBefore)}) = ${f(gap)}`,
+          `${gameText('metric.tl')}: round(${f(gap)} × 1.25) = ${f(answer)}`
+        ].join('\n');
+    reason = gameText(first ? 'game.explain.tlFirstWhy' : 'game.explain.tlWhy');
+  } else if (field === 'tgt') {
+    formula = gameText('game.explain.tgt');
+    const period = S.rows[rowIndex].l;
+    const extraCalculation = row.remain > 0
+      ? gameText('game.explain.extraCalc', {
+          shortfall: f(row.shortfall), minutes: f(row.m), remain: f(row.remain), raw: f(row.raw), extra: f(row.extra)
+        })
+      : gameText('lesson.noTime');
+    calculation = [
+      `${gameText('game.explain.baseTarget', { period })}: ${f(row.b)}`,
+      `${gameText('game.explain.baseBefore')}: ${f(row.cumBBefore)}`,
+      `${gameText('game.explain.qcBefore')}: ${f(row.cumQBefore)}`,
+      `${gameText('game.explain.shortfall')}: max(0, ${f(row.cumBBefore)} − ${f(row.cumQBefore)}) = ${f(row.shortfall)}`,
+      `${gameText('game.explain.extra')}: ${extraCalculation}`,
+      `${gameText('metric.tgt')}: ${f(row.b)} + ${f(row.extra)} = ${f(answer)}`
+    ].join('\n');
+    reason = gameText('game.explain.tgtWhy');
+  } else {
+    formula = gameText('game.explain.bal');
+    const balanceLabel = gameText(rowIndex === 0 ? 'game.explain.openingWip' : 'game.explain.balanceBefore');
+    calculation = [
+      `${balanceLabel}: ${f(row.balBefore)}`,
+      `${gameText('metric.load')}: ${f(row.load)}`,
+      `${gameText('metric.qc')}: ${f(row.qc)}`,
+      `${gameText('metric.bal')}: ${f(row.balBefore)} + ${f(row.load)} − ${f(row.qc)} = ${f(answer)}`
+    ].join('\n');
+    reason = gameText('game.explain.balWhy');
+  }
+  $('#gameAnswerPeriod').textContent = gameText('game.explain.period', { period: S.rows[rowIndex].l });
+  $('#gameAnswerTitle').textContent = gameText(`metric.${field}`);
+  $('#gameAnswerDetails').innerHTML = `<p class="game-answer-verdict ${isCorrect ? 'is-correct' : 'is-review'}">${gameText(isCorrect ? 'game.explain.correct' : 'game.explain.review')}</p><p class="game-answer-outcome${isCorrect ? ' is-correct' : ''}">${gameText('game.explain.outcome', {
+    entered: userValue === null ? gameText('game.explain.blank') : f(userValue), answer: f(answer)
+  })}</p><p class="game-answer-formula">${formula}</p><pre class="game-answer-calculation">${calculation}</pre><p class="game-answer-reason">${reason}</p>`;
+  $('#gameAnswerDialog').showModal();
+}
+document.addEventListener('click', event => {
+  const input = event.target.closest('input.game-answer-input.game-correct, input.game-answer-input.game-wrong, input.game-answer-input.game-close');
+  if (input) openGameAnswerExplanation(input);
+});
+$('#gameAnswerClose').addEventListener('click', () => $('#gameAnswerDialog').close());
+
+function restoreSavedGame() {
+  const saved = readSavedGameState();
+  if (!saved) return;
+  gameSession = saved.session;
+  gameSettings = saved.settings;
+  if (saved.isOpen && saved.mainSnapshot) {
+    gameSnapshot = saved.mainSnapshot;
+    restoreMainSnapshot(gameSnapshot);
+    openGame();
+  } else if (gameSession.started && !gameSession.finished) {
+    resumeGameTimer();
+  }
+}
+window.addEventListener('pagehide', saveGameSession);
+restoreSavedGame();

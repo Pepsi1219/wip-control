@@ -44,7 +44,7 @@
           </div>
         </div>
         <div class="settings-fields">
-          <label class="setting-field" data-setting="shiftStart"><span data-i18n="settings.shiftStart">เวลาเริ่มงาน</span><input id="shiftStart" class="time-input" type="text" value="8:00 AM" readonly aria-describedby="shiftError" aria-invalid="false"></label>
+          <label class="setting-field" data-setting="shiftStart"><span data-i18n="settings.shiftStart">เวลาเริ่มงาน</span><input id="shiftStart" class="time-input" type="time" min="08:00" max="20:55" value="08:00" required aria-describedby="shiftError" aria-invalid="false"></label>
           <label class="setting-field" data-setting="shiftEnd"><span data-i18n="settings.shiftEnd">เวลาเลิกงาน</span><input id="shiftEnd" class="time-input" type="text" value="5:00 PM" readonly aria-describedby="shiftError" aria-invalid="false"></label>
         </div>
         <p id="shiftError" class="setting-error" role="alert" hidden data-i18n="settings.shiftError">เวลาเลิกงานต้องอยู่หลังเวลาเริ่มงาน และอยู่ในช่วง 08:00–21:00</p>
@@ -65,7 +65,6 @@
       <button id="bLoadTarget" class="scenario-button" aria-pressed="false" data-i18n="button.loadTarget">LOAD = TARGET</button>
       <button id="bQcTarget" class="scenario-button" aria-pressed="false" data-i18n="button.qcTarget">QC PASS = TARGET</button>
       <button id="bFnTarget" class="scenario-button" aria-pressed="false" data-i18n="button.fnTarget">SCAN BOX = TARGET</button>
-      <button id="bRefresh" class="scenario-button reset-button" aria-label="รีเซ็ต" title="รีเซ็ต" data-i18n="button.refresh" data-i18n-aria="button.refresh" data-i18n-title="button.refresh">รีเซ็ต</button>
     </div>
     <div class="tblcard">
       <table class="spf" id="tbl">
@@ -84,9 +83,16 @@
     <div class="toolbar side-save side-toolbar">
       <div class="side-quick-settings">
         <label class="setting-field" data-setting="openingWip" for="open"><span data-i18n="settings.wip">WIP เริ่มต้น</span><input id="open" class="opening-input" type="number" min="0"></label>
-        <label class="setting-field" data-setting="targetPerHour" for="targetPerHour"><span data-i18n="settings.hourlyTarget">เป้าหมายต่อชั่วโมง</span><input id="targetPerHour" class="opening-input" type="number" min="0" step="1" value="75"></label>
+          <label class="setting-field target-setting" data-setting="targetPerHour" for="targetPerHour">
+            <span data-i18n="settings.hourlyTarget">เป้าหมายต่อชั่วโมง</span>
+            <span class="target-ratio"><input id="targetPerHour" class="opening-input" type="number" min="0" step="1" value="75"><span aria-hidden="true">/</span><output id="targetPerDay" data-i18n-aria="settings.dailyTarget" aria-live="off">600</output></span>
+            <span class="target-daily-label" data-i18n="settings.dailyTarget">เป้าหมายทั้งวัน</span>
+          </label>
       </div>
-      <button id="bSave" class="save-button" aria-live="polite" data-i18n="button.save">บันทึก</button>
+      <div class="side-save-actions">
+        <button id="bRefresh" class="scenario-button reset-button" aria-label="รีเซ็ต" title="รีเซ็ต" data-i18n="button.refresh" data-i18n-aria="button.refresh" data-i18n-title="button.refresh">รีเซ็ต</button>
+        <button id="bSave" class="save-button" aria-live="polite" data-i18n="button.save">บันทึก</button>
+      </div>
     </div>
   <aside class="side" id="side">
     <div id="selectedExplanation" aria-live="polite"></div>
@@ -192,8 +198,8 @@
       <div class="game-settings-fields">
         <label for="gameOpeningWip"><span data-i18n="settings.wip">WIP เริ่มต้น</span><input id="gameOpeningWip" type="number" min="0" max="1000000" step="1" required></label>
         <label for="gameTargetPerHour"><span data-i18n="settings.hourlyTarget">เป้าหมายต่อชั่วโมง</span><input id="gameTargetPerHour" type="number" min="1" max="1000000" step="1" required></label>
-        <label for="gameShiftStart"><span data-i18n="settings.shiftStart">เวลาเริ่มงาน</span><input id="gameShiftStart" type="time" min="08:00" max="20:55" required></label>
-        <label for="gameShiftEnd"><span data-i18n="settings.shiftEnd">เวลาเลิกงาน</span><input id="gameShiftEnd" type="time" min="08:05" max="21:00" required></label>
+        <label for="gameShiftStart"><span data-i18n="settings.shiftStart">เวลาเริ่มงาน</span><input id="gameShiftStart" type="time" min="08:00" max="20:55" required aria-describedby="gameSettingsError" aria-invalid="false"></label>
+        <label for="gameShiftEnd"><span data-i18n="settings.shiftEnd">เวลาเลิกงาน</span><input id="gameShiftEnd" type="time" min="08:00" max="21:00" required aria-describedby="gameSettingsError" aria-invalid="false"></label>
         <label for="gameDurationSetting"><span data-i18n="game.duration">เวลาเล่น</span><span class="game-duration-input"><input id="gameDurationSetting" type="number" min="1" max="30" step="1" value="5" required><span data-i18n="game.minutes">นาที</span></span></label>
       </div>
       <p id="gameSettingsError" class="game-settings-error" role="alert" hidden data-i18n="game.shiftError">เวลาเลิกงานต้องอยู่หลังเวลาเริ่มงาน</p>
@@ -224,6 +230,7 @@
 <script src="demo-data.js"></script>
 <script src="i18n"></script>
 <script src="https://cdn.jsdelivr.net/npm/flatpickr@4.6.13"></script>
+<script src="logic.js"></script>
 <script src="spf-hourly.js"></script>
 </body>
 </html>

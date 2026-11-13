@@ -4,7 +4,7 @@
       'page.title': 'ตาราง WIP Control Monitoring ทำงานอย่างไร',
       'page.documentTitle': 'สื่อการสอน: WIP Control Monitoring',
       'settings.open': 'ตั้งค่า', 'settings.title': 'ค่าเริ่มต้น', 'settings.wip': 'WIP เริ่มต้น',
-      'settings.hourlyTarget': 'เป้าหมายต่อชั่วโมง', 'settings.shiftStart': 'เวลาเริ่มงาน', 'settings.shiftEnd': 'เวลาเลิกงาน',
+      'settings.hourlyTarget': 'เป้าหมายต่อชั่วโมง', 'settings.dailyTarget': 'เป้าหมายทั้งวัน', 'settings.shiftStart': 'เวลาเริ่มงาน', 'settings.shiftEnd': 'เวลาเลิกงาน',
       'settings.sliderMax': 'ค่าสูงสุดของเกจ',
       'settings.shiftError': 'เวลาเลิกงานต้องอยู่หลังเวลาเริ่มงาน และอยู่ในช่วง 08:00–21:00',
       'display.allHours': 'แสดงทุกชั่วโมง', 'theme.darkMode': 'โหมดมืด', 'theme.lightMode': 'โหมดสว่าง',
@@ -53,7 +53,7 @@
       'page.title': 'How WIP Control Monitoring Works',
       'page.documentTitle': 'WIP Control Monitoring Guide',
       'settings.open': 'Settings', 'settings.title': 'Defaults', 'settings.wip': 'Opening WIP',
-      'settings.hourlyTarget': 'Target per hour', 'settings.shiftStart': 'Shift start', 'settings.shiftEnd': 'Shift end',
+      'settings.hourlyTarget': 'Target per hour', 'settings.dailyTarget': 'Daily target', 'settings.shiftStart': 'Shift start', 'settings.shiftEnd': 'Shift end',
       'settings.sliderMax': 'Slider maximum',
       'settings.shiftError': 'Shift end must be later than shift start and between 08:00 and 21:00.',
       'display.allHours': 'Show every hour', 'theme.darkMode': 'Dark mode', 'theme.lightMode': 'Light mode',
@@ -102,7 +102,7 @@
       'page.title': 'Cách hoạt động của WIP Control Monitoring',
       'page.documentTitle': 'Hướng dẫn WIP Control Monitoring',
       'settings.open': 'Cài đặt', 'settings.title': 'Thiết lập mặc định', 'settings.wip': 'WIP đầu ca',
-      'settings.hourlyTarget': 'Mục tiêu mỗi giờ', 'settings.shiftStart': 'Giờ bắt đầu', 'settings.shiftEnd': 'Giờ kết thúc',
+      'settings.hourlyTarget': 'Mục tiêu mỗi giờ', 'settings.dailyTarget': 'Mục tiêu cả ngày', 'settings.shiftStart': 'Giờ bắt đầu', 'settings.shiftEnd': 'Giờ kết thúc',
       'settings.sliderMax': 'Giá trị tối đa của thanh trượt',
       'settings.shiftError': 'Giờ kết thúc phải sau giờ bắt đầu và nằm trong khoảng 08:00–21:00.',
       'display.allHours': 'Hiển thị tất cả giờ', 'theme.darkMode': 'Giao diện tối', 'theme.lightMode': 'Giao diện sáng',
@@ -151,7 +151,7 @@
       'page.title': 'ວິທີເຮັດວຽກຂອງ WIP Control Monitoring',
       'page.documentTitle': 'ຄູ່ມື WIP Control Monitoring',
       'settings.open': 'ຕັ້ງຄ່າ', 'settings.title': 'ຄ່າເລີ່ມຕົ້ນ', 'settings.wip': 'WIP ເລີ່ມຕົ້ນ',
-      'settings.hourlyTarget': 'ເປົ້າໝາຍຕໍ່ຊົ່ວໂມງ', 'settings.shiftStart': 'ເວລາເລີ່ມວຽກ', 'settings.shiftEnd': 'ເວລາເລີກວຽກ',
+      'settings.hourlyTarget': 'ເປົ້າໝາຍຕໍ່ຊົ່ວໂມງ', 'settings.dailyTarget': 'ເປົ້າໝາຍທັງມື້', 'settings.shiftStart': 'ເວລາເລີ່ມວຽກ', 'settings.shiftEnd': 'ເວລາເລີກວຽກ',
       'settings.sliderMax': 'ຄ່າສູງສຸດຂອງແຖບເລື່ອນ',
       'settings.shiftError': 'ເວລາເລີກວຽກຕ້ອງຫຼັງເວລາເລີ່ມ ແລະຢູ່ໃນຊ່ວງ 08:00–21:00.',
       'display.allHours': 'ສະແດງທຸກຊົ່ວໂມງ', 'theme.darkMode': 'ໂໝດມືດ', 'theme.lightMode': 'ໂໝດສະຫວ່າງ',
@@ -349,7 +349,7 @@
 
   Object.assign(messages.th, {
     'game.open': 'Game', 'game.exit': 'กลับหน้าหลัก', 'game.kicker': 'WIP CONTROL / TRAINING MODE',
-    'game.title': 'SHIFT SPRINT', 'game.settings': 'ตั้งค่าเกม', 'game.closeSettings': 'ปิด', 'game.cancel': 'ยกเลิก', 'game.applySettings': 'ใช้ค่านี้', 'game.shiftError': 'เวลาเลิกงานต้องอยู่หลังเวลาเริ่มงาน', 'game.duration': 'เวลาเล่น', 'game.minutes': 'นาที',
+    'game.title': 'SHIFT SPRINT', 'game.settings': 'ตั้งค่าเกม', 'game.closeSettings': 'ปิด', 'game.cancel': 'ยกเลิก', 'game.applySettings': 'ใช้ค่านี้', 'game.shiftError': 'เวลาเลิกงานต้องอยู่หลังเวลาเริ่มงาน และอยู่ในช่วง 08:00–21:00', 'game.duration': 'เวลาเล่น', 'game.minutes': 'นาที',
     'game.start': 'เริ่มเกม', 'game.finish': 'ส่งคำตอบ', 'game.ready': 'อ่านข้อมูลในตาราง แล้วกรอกค่าที่ต้องคำนวณ',
     'game.playing': 'จับเวลาแล้ว! คิดให้แม่นและกรอกให้ครบ', 'game.done': 'จบรอบ ตรวจคำตอบด้านล่าง',
     'game.allComplete': 'ครบทุกชั่วโมงแล้ว กดส่งคำตอบเพื่อดูคะแนน',
@@ -376,7 +376,7 @@
   });
   Object.assign(messages.en, {
     'game.open': 'Game', 'game.exit': 'Back to simulator', 'game.kicker': 'WIP CONTROL / TRAINING MODE',
-    'game.title': 'SHIFT SPRINT', 'game.settings': 'Game settings', 'game.closeSettings': 'Close', 'game.cancel': 'Cancel', 'game.applySettings': 'Apply settings', 'game.shiftError': 'Shift end must be later than shift start.', 'game.duration': 'Time', 'game.minutes': 'min',
+    'game.title': 'SHIFT SPRINT', 'game.settings': 'Game settings', 'game.closeSettings': 'Close', 'game.cancel': 'Cancel', 'game.applySettings': 'Apply settings', 'game.shiftError': 'Shift end must be later than shift start and within 08:00–21:00.', 'game.duration': 'Time', 'game.minutes': 'min',
     'game.start': 'Start round', 'game.finish': 'Submit', 'game.ready': 'Read the shift data, then calculate the missing values.',
     'game.playing': 'Clock is running. Stay sharp and fill every answer.', 'game.done': 'Round complete. Review your answers below.',
     'game.allComplete': 'All hours complete. Submit to see your score.',
@@ -403,7 +403,7 @@
   });
   Object.assign(messages.vi, {
     'game.open': 'Trò chơi', 'game.exit': 'Quay lại mô phỏng', 'game.kicker': 'WIP CONTROL / CHẾ ĐỘ LUYỆN TẬP',
-    'game.title': 'SHIFT SPRINT', 'game.settings': 'Cài đặt trò chơi', 'game.closeSettings': 'Đóng', 'game.cancel': 'Hủy', 'game.applySettings': 'Áp dụng', 'game.shiftError': 'Giờ kết thúc phải sau giờ bắt đầu.', 'game.duration': 'Thời gian', 'game.minutes': 'phút',
+    'game.title': 'SHIFT SPRINT', 'game.settings': 'Cài đặt trò chơi', 'game.closeSettings': 'Đóng', 'game.cancel': 'Hủy', 'game.applySettings': 'Áp dụng', 'game.shiftError': 'Giờ kết thúc phải sau giờ bắt đầu và trong khoảng 08:00–21:00.', 'game.duration': 'Thời gian', 'game.minutes': 'phút',
     'game.start': 'Bắt đầu', 'game.finish': 'Nộp bài', 'game.ready': 'Đọc dữ liệu ca rồi tính các giá trị còn thiếu.',
     'game.playing': 'Đồng hồ đã chạy. Tập trung và điền đủ đáp án.', 'game.done': 'Hoàn thành lượt chơi. Xem lại đáp án bên dưới.',
     'game.allComplete': 'Đã hoàn thành tất cả khung giờ. Nộp bài để xem điểm.',
@@ -430,7 +430,7 @@
   });
   Object.assign(messages.lo, {
     'game.open': 'ເກມ', 'game.exit': 'ກັບໄປໜ້າຈຳລອງ', 'game.kicker': 'WIP CONTROL / ໂໝດຝຶກຫັດ',
-    'game.title': 'SHIFT SPRINT', 'game.settings': 'ຕັ້ງຄ່າເກມ', 'game.closeSettings': 'ປິດ', 'game.cancel': 'ຍົກເລີກ', 'game.applySettings': 'ນຳໃຊ້ຄ່າ', 'game.shiftError': 'ເວລາເລີກວຽກຕ້ອງຫຼັງເວລາເລີ່ມວຽກ.', 'game.duration': 'ເວລາ', 'game.minutes': 'ນາທີ',
+    'game.title': 'SHIFT SPRINT', 'game.settings': 'ຕັ້ງຄ່າເກມ', 'game.closeSettings': 'ປິດ', 'game.cancel': 'ຍົກເລີກ', 'game.applySettings': 'ນຳໃຊ້ຄ່າ', 'game.shiftError': 'ເວລາເລີກວຽກຕ້ອງຫຼັງເວລາເລີ່ມວຽກ ແລະຢູ່ໃນຊ່ວງ 08:00–21:00.', 'game.duration': 'ເວລາ', 'game.minutes': 'ນາທີ',
     'game.start': 'ເລີ່ມເກມ', 'game.finish': 'ສົ່ງຄຳຕອບ', 'game.ready': 'ອ່ານຂໍ້ມູນກະ ແລ້ວຄຳນວນຄ່າທີ່ຂາດ.',
     'game.playing': 'ເລີ່ມຈັບເວລາແລ້ວ! ຄິດໃຫ້ແມ່ນ ແລະຕື່ມໃຫ້ຄົບ.', 'game.done': 'ຈົບຮອບແລ້ວ. ກວດຄຳຕອບດ້ານລຸ່ມ.',
     'game.allComplete': 'ຄົບທຸກຊົ່ວໂມງແລ້ວ. ກົດສົ່ງຄຳຕອບເພື່ອເບິ່ງຄະແນນ.',

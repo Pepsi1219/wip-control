@@ -18,6 +18,8 @@ const N = v => {
   const n = Number(v);
   return Number.isFinite(n) ? n : 0;
 };
+const SPF_LOGIC = window.SPF_LOGIC;
+const { clockValue } = SPF_LOGIC;
 const MAX_VALUE_SLIDER_LIMIT = 1000000;
 localStorage.removeItem('wip-slider-max');
 const STORAGE_KEY = 'spf-hourly-saved-state';
@@ -140,7 +142,6 @@ function deactivateValueCell() {
   }
   activeValueCell = null;
 }
-const SHIFT_MINUTES = [60, 60, 60, 30, 30, 60, 60, 60, 60, 30, 60, 30, 60];
 const LESSON_CELLS = ['bal', 'tgt', 'tl', 'load', 'qc', 'bal'];
 function fitPickerCalendar(_, __, picker) {
   picker.calendarContainer.style.width = `${Math.ceil(picker.input.getBoundingClientRect().width)}px`;
@@ -158,37 +159,18 @@ const timePickerOptions = {
   minTime: '08:00',
   maxTime: '21:00'
 };
-const shiftStartPicker = flatpickr('#shiftStart', { ...timePickerOptions, defaultDate: '8:00 AM', maxTime: '20:55' });
 const shiftEndPicker = flatpickr('#shiftEnd', { ...timePickerOptions, defaultDate: '5:00 PM', minTime: '08:05' });
+
+function shiftStartMinutes() {
+  const value = $('#shiftStart').value;
+  if (!/^\d{2}:\d{2}$/.test(value)) return NaN;
+  const [hour, minute] = value.split(':').map(Number);
+  return hour * 60 + minute;
+}
 
 function pickerMinutes(picker) {
   const date = picker.selectedDates[0];
   return date ? date.getHours() * 60 + date.getMinutes() : NaN;
-}
-
-function clockValue(minutes) {
-  const hour = Math.floor(minutes / 60);
-  const minute = minutes % 60;
-  return `${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}`;
-}
-
-function periodDuration(label) {
-  const [start, end] = label.split('-').map(time => {
-    const [hour, minute] = time.split(':').map(Number);
-    return hour * 60 + minute;
-  });
-  return end - start;
-}
-
-function distributeBaseTargets(rows, targetPerHour) {
-  let workedMinutes = 0;
-  let previousTarget = 0;
-  rows.forEach(row => {
-    workedMinutes += N(row.m);
-    const cumulativeTarget = Math.round(targetPerHour * workedMinutes / 60);
-    row.b = cumulativeTarget - previousTarget;
-    previousTarget = cumulativeTarget;
-  });
 }
 
 function setPickerMinutes(picker, minutes) {
@@ -196,17 +178,21 @@ function setPickerMinutes(picker, minutes) {
   picker.setDate(date, false);
 }
 
+function setShiftStartMinutes(minutes) {
+  $('#shiftStart').value = clockValue(minutes);
+}
+
 function normalizeShiftPickers(changedPicker) {
-  let start = pickerMinutes(shiftStartPicker);
+  let start = shiftStartMinutes();
   let end = pickerMinutes(shiftEndPicker);
   if (!Number.isFinite(start) || !Number.isFinite(end)) return false;
 
-  if (start >= end && changedPicker === shiftStartPicker) {
+  if (start >= end && changedPicker === $('#shiftStart')) {
     end = start + 5;
     if (end > 21 * 60) {
       start = 21 * 60 - 5;
       end = 21 * 60;
-      setPickerMinutes(shiftStartPicker, start);
+      setShiftStartMinutes(start);
     }
     setPickerMinutes(shiftEndPicker, end);
   } else if (start >= end && changedPicker === shiftEndPicker) {
@@ -216,49 +202,14 @@ function normalizeShiftPickers(changedPicker) {
       end = start + 5;
       setPickerMinutes(shiftEndPicker, end);
     }
-    setPickerMinutes(shiftStartPicker, start);
+    setShiftStartMinutes(start);
   }
 
-  return pickerMinutes(shiftStartPicker) < pickerMinutes(shiftEndPicker);
-}
-
-function makeShiftData(source, start, end, targetPerHour) {
-  const previousRows = new Map(source.rows.map(row => [row.l, row]));
-  const [startHour, startMinute] = start.split(':').map(Number);
-  const [endHour, endMinute] = end.split(':').map(Number);
-  const startMinutes = startHour * 60 + startMinute;
-  const endMinutes = endHour * 60 + endMinute;
-  const rows = [];
-
-  for (let hour = 8; hour < 21; hour++) {
-    const periodStart = hour * 60;
-    const periodEnd = periodStart + 60;
-    const activeStart = Math.max(periodStart, startMinutes);
-    const activeEnd = Math.min(periodEnd, endMinutes);
-    if (activeEnd <= activeStart) continue;
-    const label = `${clockValue(activeStart)}-${clockValue(activeEnd)}`;
-    const previous = previousRows.get(label) || {};
-    const requestedMinutes = Number.isFinite(Number(previous.m)) ? Number(previous.m) : SHIFT_MINUTES[hour - 8];
-    const minutes = Math.min(Math.max(0, requestedMinutes), activeEnd - activeStart);
-    rows.push({
-      l: label,
-      m: minutes,
-      b: 0,
-      load: N(previous.load),
-      loadEntered: previous.loadEntered ?? true,
-      qc: N(previous.qc),
-      fn: N(previous.fn),
-      qcEntered: Boolean(previous.qcEntered),
-      fnEntered: Boolean(previous.fnEntered)
-    });
-  }
-
-  distributeBaseTargets(rows, targetPerHour);
-  return { open: N(source.open), rows };
+  return shiftStartMinutes() < pickerMinutes(shiftEndPicker);
 }
 
 function currentShiftData(source) {
-  return makeShiftData(source, clockValue(pickerMinutes(shiftStartPicker)), clockValue(pickerMinutes(shiftEndPicker)), N($('#targetPerHour').value));
+  return SPF_LOGIC.makeShiftData(source, clockValue(shiftStartMinutes()), clockValue(pickerMinutes(shiftEndPicker)), N($('#targetPerHour').value));
 }
 
 function initialShiftData() {
@@ -275,7 +226,7 @@ function visibleRowCount() {
 
 function updateShiftSettings(changedPicker) {
   normalizeShiftPickers(changedPicker);
-  const start = pickerMinutes(shiftStartPicker);
+  const start = shiftStartMinutes();
   const end = pickerMinutes(shiftEndPicker);
   const valid = Number.isFinite(start) && Number.isFinite(end) && start >= 8 * 60 && end <= 21 * 60 && end > start;
   $('#shiftError').hidden = valid;
@@ -296,35 +247,7 @@ function updateShiftSettings(changedPicker) {
 }
 
 function calc() {
-  const rows = S.rows, n = rows.length;
-  const remain = [];
-  let s = 0;
-  for (let i = n - 1; i >= 0; i--) {
-    s += N(rows[i].m);
-    remain[i] = s;
-  }
-  let bal = N(S.open), cumB = 0, cumQ = 0, cumF = 0, cumT = 0, out = [];
-  for (let i = 0; i < n; i++) {
-    const r = rows[i], b = N(r.b), load = N(r.load), qc = N(r.qc), fn = N(r.fn), m = N(r.m);
-    const shortfall = Math.max(0, cumB - cumQ);
-    const raw = remain[i] > 0 ? shortfall * m / remain[i] : 0;
-    const extra = Math.round(raw);
-    const target = b + extra;
-    const loadGap = i === 0 ? target * 1.25 - bal : (target - bal) * 1.25;
-    const tl = Math.round(Math.max(0, loadGap));
-    const balBefore = bal;
-    bal = bal + load - qc;
-    const x = { i, b, m, load, qc, fn, shortfall, raw, extra, target, tl, balBefore, bal, remain: remain[i], cumBBefore: cumB, cumQBefore: cumQ };
-    cumB += b; cumQ += qc; cumF += fn; cumT += target;
-    x.cumQ = cumQ; x.cumF = cumF; x.cumT = cumT; x.qcDiff = cumQ - cumT; x.fnDiff = cumF - cumT;
-    x.loadCls = load < tl ? 'lo' : (load > 1.25 * tl ? 'hi' : '');
-    out.push(x);
-  }
-  const T = { tl: 0, load: 0, tgt: 0, qc: 0, fn: 0, b: 0, extra: 0 };
-  out.forEach(x => { T.tl += x.tl; T.load += x.load; T.tgt += x.target; T.qc += x.qc; T.fn += x.fn; T.b += x.b; T.extra += x.extra; });
-  T.bal = bal; T.qcDiff = T.qc - T.tgt; T.fnDiff = T.fn - T.tgt;
-  T.loadCls = T.load < T.tl ? 'lo' : (T.load > 1.25 * T.tl ? 'hi' : '');
-  return { rows: out, T };
+  return SPF_LOGIC.calculate(S);
 }
 
 const cells = {};
@@ -346,7 +269,7 @@ function build() {
   });
   $$('td[data-c]').forEach(td => { cells[td.dataset.i + '_' + td.dataset.c] = td; });
   const t = window.WIP_I18N.t;
-  $('#setRows').innerHTML = S.rows.map((row, i) => `<tr><td>${row.l}</td><td><input class="schedule-minute-input" type="number" min="0" max="${periodDuration(row.l)}" step="1" value="${N(row.m)}" data-schedule-minute="${i}" aria-label="${t('schedule.minutesFor', { period: row.l })}"></td><td>${f(row.b)}</td></tr>`).join('');
+  $('#setRows').innerHTML = S.rows.map((row, i) => `<tr><td>${row.l}</td><td><input class="schedule-minute-input" type="number" min="0" max="${SPF_LOGIC.periodDuration(row.l)}" step="1" value="${N(row.m)}" data-schedule-minute="${i}" aria-label="${t('schedule.minutesFor', { period: row.l })}"></td><td>${f(row.b)}</td></tr>`).join('');
   syncScheduleTable();
   $('#lessonPeriod').innerHTML = S.rows.map((r, i) => `<option value="${i}">${r.l}</option>`).join('');
   lessonRow = Math.min(lessonRow, S.rows.length - 1);
@@ -355,10 +278,11 @@ function build() {
 function syncScheduleTable() {
   const minutesTotal = S.rows.reduce((total, row) => total + N(row.m), 0);
   const baseTotal = S.rows.reduce((total, row) => total + N(row.b), 0);
+  $('#targetPerDay').textContent = f(Math.round(N($('#targetPerHour').value) * minutesTotal / 60));
   S.rows.forEach((row, i) => {
     const input = $(`input[data-schedule-minute="${i}"]`);
     if (input) {
-      input.max = String(periodDuration(row.l));
+      input.max = String(SPF_LOGIC.periodDuration(row.l));
       input.setAttribute('aria-label', window.WIP_I18N.t('schedule.minutesFor', { period: row.l }));
       if (document.activeElement !== input) input.value = String(N(row.m));
     }
@@ -603,11 +527,11 @@ document.addEventListener('input', e => {
   const t = e.target;
   if (t.matches('input[data-schedule-minute]')) {
     const rowIndex = Number(t.dataset.scheduleMinute);
-    const maxMinutes = periodDuration(S.rows[rowIndex].l);
+    const maxMinutes = SPF_LOGIC.periodDuration(S.rows[rowIndex].l);
     const minutes = Math.min(maxMinutes, Math.max(0, Math.round(N(t.value))));
     t.value = String(minutes);
     S.rows[rowIndex].m = minutes;
-    distributeBaseTargets(S.rows, N($('#targetPerHour').value));
+    SPF_LOGIC.distributeBaseTargets(S.rows, N($('#targetPerHour').value));
     clearScenarioSelectionForManualEdit();
     update();
     return;
@@ -638,7 +562,7 @@ document.addEventListener('change', e => {
   sel = { i: lessonRow, c: 'tgt' };
   update();
 });
-$('#shiftStart').addEventListener('change', () => updateShiftSettings(shiftStartPicker));
+$('#shiftStart').addEventListener('change', () => updateShiftSettings($('#shiftStart')));
 $('#shiftEnd').addEventListener('change', () => updateShiftSettings(shiftEndPicker));
 $('#displayAllHours').addEventListener('change', update);
 $('#valueSliderMaxSetting').value = String(valueSliderLimit);
@@ -793,7 +717,7 @@ function toggleScenario(scenarioId) {
 });
 $('#bRefresh').onclick = () => {
   try { localStorage.removeItem(STORAGE_KEY); } catch {}
-  setPickerMinutes(shiftStartPicker, 8 * 60);
+  setShiftStartMinutes(8 * 60);
   setPickerMinutes(shiftEndPicker, 17 * 60);
   $('#targetPerHour').value = '75';
   $('#displayAllHours').checked = false;
@@ -820,7 +744,7 @@ $('#bSave').onclick = () => {
       version: 1,
       state: S,
       settings: {
-        shiftStart: pickerMinutes(shiftStartPicker),
+        shiftStart: shiftStartMinutes(),
         shiftEnd: pickerMinutes(shiftEndPicker),
         targetPerHour: N($('#targetPerHour').value),
         displayAllHours: $('#displayAllHours').checked,
@@ -856,7 +780,7 @@ $('#lessonNext').onclick = () => {
 };
 const savedSnapshot = readSavedSnapshot();
 if (savedSnapshot) {
-  setPickerMinutes(shiftStartPicker, savedSnapshot.settings.shiftStart);
+  setShiftStartMinutes(savedSnapshot.settings.shiftStart);
   setPickerMinutes(shiftEndPicker, savedSnapshot.settings.shiftEnd);
   $('#targetPerHour').value = String(savedSnapshot.settings.targetPerHour);
   $('#displayAllHours').checked = savedSnapshot.settings.displayAllHours;
@@ -909,7 +833,7 @@ function createGameChallenge(settings) {
   const end = endHour * 60 + endMinute;
   const open = settings.openingWip;
   const targetPerHour = settings.targetPerHour;
-  const challenge = makeShiftData({ open, rows: [] }, clockValue(start), clockValue(end), targetPerHour);
+  const challenge = SPF_LOGIC.makeShiftData({ open, rows: [] }, clockValue(start), clockValue(end), targetPerHour);
   let runningWip = open;
   challenge.rows.forEach(row => {
     const maxLoad = Math.max(15, Math.round(targetPerHour * 1.35));
@@ -1001,7 +925,7 @@ function commitGameAnswer(input) {
 }
 function renderGameBoard() {
   if (!gameSession) return;
-  const result = calc();
+  const result = SPF_LOGIC.calculate(gameSession.challenge);
   const locked = !gameSession.started || gameSession.finished;
   result.rows.forEach((row, index) => {
     const entry = gameSession.entries[index];
@@ -1132,7 +1056,7 @@ function createGameSession() {
     entries: S.rows.map(() => ({ tl: null, tgt: null, bal: null })),
     answers: []
   };
-  gameSession.answers = calc().rows.map(row => ({ tl: row.tl, tgt: row.target, bal: row.bal }));
+  gameSession.answers = SPF_LOGIC.calculate(gameSession.challenge).rows.map(row => ({ tl: row.tl, tgt: row.target, bal: row.bal }));
   $('#gameResult').hidden = true;
   $('#gameResult').innerHTML = '';
   $('#gameSettingsOpen').disabled = false;
@@ -1152,7 +1076,7 @@ function openGame() {
     gameSettings = {
       openingWip: N(S.open),
       targetPerHour: Math.max(1, N($('#targetPerHour').value)),
-      shiftStart: clockValue(pickerMinutes(shiftStartPicker)),
+      shiftStart: clockValue(shiftStartMinutes()),
       shiftEnd: clockValue(pickerMinutes(shiftEndPicker)),
       duration: 5
     };
@@ -1185,7 +1109,7 @@ function captureMainSnapshot() {
     scenarioBase: JSON.parse(JSON.stringify(scenarioBase)),
     activeScenarios: [...activeScenarios],
     demoSnapshot: demoSnapshot ? JSON.parse(JSON.stringify(demoSnapshot)) : null,
-    shiftStart: pickerMinutes(shiftStartPicker),
+    shiftStart: shiftStartMinutes(),
     shiftEnd: pickerMinutes(shiftEndPicker),
     targetPerHour: $('#targetPerHour').value,
     displayAllHours: $('#displayAllHours').checked,
@@ -1202,7 +1126,7 @@ function restoreMainSnapshot(snapshot) {
   activeScenarios.clear();
   snapshot.activeScenarios.forEach(id => activeScenarios.add(id));
   demoSnapshot = snapshot.demoSnapshot;
-  setPickerMinutes(shiftStartPicker, snapshot.shiftStart);
+  setShiftStartMinutes(snapshot.shiftStart);
   setPickerMinutes(shiftEndPicker, snapshot.shiftEnd);
   $('#targetPerHour').value = snapshot.targetPerHour;
   $('#displayAllHours').checked = snapshot.displayAllHours;
@@ -1244,23 +1168,43 @@ function openGameSettings() {
   $('#gameShiftStart').value = gameSettings.shiftStart;
   $('#gameShiftEnd').value = gameSettings.shiftEnd;
   $('#gameDurationSetting').value = String(gameSettings.duration);
-  $('#gameSettingsError').hidden = true;
+  syncGameShiftTimeConstraints();
   $('#gameSettingsDialog').showModal();
 }
+
+function syncGameShiftTimeConstraints() {
+  const startInput = $('#gameShiftStart');
+  const endInput = $('#gameShiftEnd');
+  const start = timeInputMinutes(startInput.value);
+  const end = timeInputMinutes(endInput.value);
+
+  endInput.min = Number.isFinite(start) ? clockValue(Math.max(8 * 60, start + 1)) : '08:00';
+  startInput.max = Number.isFinite(end) ? clockValue(Math.min(20 * 60 + 55, end - 1)) : '20:55';
+
+  const valid = Number.isFinite(start) && Number.isFinite(end) && start >= 8 * 60 && start <= 20 * 60 + 55 && end >= 8 * 60 && end <= 21 * 60 && end > start && !startInput.validity.rangeUnderflow && !startInput.validity.rangeOverflow && !endInput.validity.rangeUnderflow && !endInput.validity.rangeOverflow;
+  $('#gameSettingsError').hidden = valid;
+  startInput.setAttribute('aria-invalid', String(!valid && (!Number.isFinite(start) || startInput.validity.rangeUnderflow || startInput.validity.rangeOverflow)));
+  endInput.setAttribute('aria-invalid', String(!valid && (!Number.isFinite(end) || endInput.validity.rangeUnderflow || endInput.validity.rangeOverflow || end <= start)));
+}
+
+function timeInputMinutes(value) {
+  if (!/^\d{2}:\d{2}$/.test(value)) return NaN;
+  const [hour, minute] = value.split(':').map(Number);
+  return hour * 60 + minute;
+}
+
 $('#gameSettingsOpen').addEventListener('click', openGameSettings);
 $('#gameSettingsClose').addEventListener('click', () => $('#gameSettingsDialog').close());
 $('#gameSettingsCancel').addEventListener('click', () => $('#gameSettingsDialog').close());
+$('#gameShiftStart').addEventListener('input', syncGameShiftTimeConstraints);
+$('#gameShiftEnd').addEventListener('input', syncGameShiftTimeConstraints);
 $('#gameSettingsForm').addEventListener('submit', event => {
   event.preventDefault();
   const form = event.currentTarget;
-  if (!form.reportValidity()) return;
   const start = $('#gameShiftStart').value;
   const end = $('#gameShiftEnd').value;
-  if (end <= start) {
-    $('#gameSettingsError').hidden = false;
-    $('#gameShiftEnd').focus();
-    return;
-  }
+  syncGameShiftTimeConstraints();
+  if (!Number.isFinite(timeInputMinutes(start)) || !Number.isFinite(timeInputMinutes(end)) || end <= start || !form.reportValidity()) return;
   gameSettings = {
     openingWip: Math.round(N($('#gameOpeningWip').value)),
     targetPerHour: Math.round(N($('#gameTargetPerHour').value)),
@@ -1310,7 +1254,7 @@ document.addEventListener('keydown', event => {
 function openGameAnswerExplanation(input) {
   if (!gameSession?.finished || !input.matches('.game-correct, .game-wrong, .game-close')) return;
   const rowIndex = Number(input.dataset.gameRow), field = input.dataset.gameField;
-  const row = calc().rows[rowIndex];
+  const row = SPF_LOGIC.calculate(gameSession.challenge).rows[rowIndex];
   const answer = gameSession.answers[rowIndex][field];
   const userValue = gameSession.entries[rowIndex][field];
   const isCorrect = userValue !== null && userValue === answer;

@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="th" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ทำเนียบผู้ชนะ WIP Control</title>
+<link rel="stylesheet" href="leaderboard-page.css?v=2">
+</head>
+<body class="leaderboard-page" data-document-title="game.leaderboardDocumentTitle">
+  <header class="leaderboard-nav">
+    <a class="leaderboard-back" href="index.html"><span aria-hidden="true">&#8592;</span><span data-i18n="game.leaderboardBack">กลับสู่เกม</span></a>
+    <label class="leaderboard-language"><span class="visually-hidden" data-i18n="settings.language">ภาษา</span>
+      <select id="languageSelect" aria-label="ภาษา" data-i18n-aria="settings.language">
+        <option value="th">ไทย</option><option value="en">English</option><option value="vi">Tiếng Việt</option><option value="lo">ລາວ</option>
+      </select>
+    </label>
+  </header>
+  <main class="leaderboard-main">
+    <div class="leaderboard-title-row">
+      <div>
+        <p class="leaderboard-eyebrow">WIP CONTROL / TRAINING MODE</p>
+        <h1 data-i18n="game.leaderboardTitle">ทำเนียบผู้ชนะ WIP Control</h1>
+        <p class="leaderboard-subtitle" data-i18n="game.leaderboardSubtitle">คะแนนสูงสุดของผู้เล่น</p>
+      </div>
+      <button id="leaderboardRefresh" class="leaderboard-refresh" type="button" data-i18n="game.leaderboardRefresh">โหลดใหม่</button>
+    </div>
+    <section class="leaderboard-panel" aria-labelledby="leaderboardListTitle">
+      <h2 id="leaderboardListTitle" class="visually-hidden" data-i18n="game.leaderboardTop">TOP 10</h2>
+      <div class="leaderboard-columns" aria-hidden="true">
+        <span data-i18n="game.leaderboardRank">อันดับ</span>
+        <span data-i18n="game.leaderboardPlayer">ผู้เล่น</span>
+        <span data-i18n="game.leaderboardScore">คะแนน</span>
+        <span data-i18n="game.leaderboardAccuracy">ความแม่นยำ</span>
+        <span data-i18n="game.leaderboardTime">เวลา</span>
+        <span data-i18n="game.leaderboardDateTime">วันที่ เวลา</span>
+      </div>
+      <p id="leaderboardStatus" class="leaderboard-status" role="status" data-i18n="game.leaderboardLoading">กำลังโหลดอันดับ...</p>
+      <ol id="leaderboardRows" class="leaderboard-list"></ol>
+    </section>
+  </main>
+  <script src="i18n"></script>
+  <script src="firebase-config.js"></script>
+  <script src="leaderboard.js"></script>
+  <script src="leaderboard-page.js"></script>
+</body>
+</html>

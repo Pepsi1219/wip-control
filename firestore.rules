@@ -1,0 +1,35 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /wipControlScores/{scoreId} {
+      allow read: if true;
+      allow create: if request.auth != null
+        && request.resource.data.keys().hasAll([
+          'nickname', 'points', 'maxPoints', 'accuracy',
+          'elapsedSeconds', 'completedAt', 'uid'
+        ])
+        && request.resource.data.keys().hasOnly([
+          'nickname', 'points', 'maxPoints', 'accuracy',
+          'elapsedSeconds', 'completedAt', 'uid'
+        ])
+        && request.resource.data.uid == request.auth.uid
+        && request.resource.data.nickname is string
+        && request.resource.data.nickname.size() > 0
+        && request.resource.data.nickname.size() <= 24
+        && request.resource.data.points is number
+        && request.resource.data.points >= 0
+        && request.resource.data.maxPoints is int
+        && request.resource.data.maxPoints > 0
+        && request.resource.data.maxPoints <= 39
+        && request.resource.data.points <= request.resource.data.maxPoints
+        && request.resource.data.accuracy is int
+        && request.resource.data.accuracy >= 0
+        && request.resource.data.accuracy <= 100
+        && request.resource.data.elapsedSeconds is int
+        && request.resource.data.elapsedSeconds >= 0
+        && request.resource.data.elapsedSeconds <= 1800
+        && request.resource.data.completedAt == request.time;
+      allow update, delete: if false;
+    }
+  }
+}

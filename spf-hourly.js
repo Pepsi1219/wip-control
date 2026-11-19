@@ -859,6 +859,10 @@ function createGameChallenge(settings) {
 function gameText(key, values) {
   return window.WIP_I18N.t(key, values);
 }
+function formatGameDuration(seconds) {
+  const elapsed = Math.max(0, Math.floor(N(seconds)));
+  return gameText('game.elapsed', { minutes: Math.floor(elapsed / 60), seconds: elapsed % 60 });
+}
 function gameDurationSeconds() {
   return gameSettings.duration * 60;
 }
@@ -1036,13 +1040,14 @@ function finishGame() {
   const maxPoints = total;
   const accuracy = total ? Math.round(points / maxPoints * 100) : 0;
   const rank = accuracy >= 90 ? 'game.rankTop' : accuracy >= 70 ? 'game.rankGood' : accuracy >= 45 ? 'game.rankWarm' : 'game.rankTry';
+  const elapsedSeconds = Math.max(0, gameDurationSeconds() - gameSession.remainingSeconds);
   $('#gameTimer').textContent = formatGameClock(gameSession.remainingSeconds);
   $('#gameTimer').classList.remove('is-urgent');
   $('#gameStatus').textContent = gameText('game.done');
   $('#gameStart').hidden = true;
   $('#gameFinish').hidden = true;
   $('#gameSettingsOpen').disabled = false;
-  gameSession.result = { points, maxPoints, accuracy, rank };
+  gameSession.result = { points, maxPoints, accuracy, rank, elapsedSeconds };
   if (gameIsOpen) {
     renderGameResult();
     renderGameBoard();
@@ -1052,9 +1057,19 @@ function finishGame() {
 function renderGameResult() {
   if (!gameSession?.result) return;
   const { points, maxPoints, accuracy, rank } = gameSession.result;
-  $('#gameResult').innerHTML = `<div class="game-result-score">${f(points)}<small> / ${maxPoints}</small></div><div class="game-result-copy"><strong>${gameText(rank)}</strong><span>${gameText('game.resultSummary', { accuracy })}</span></div><button id="gameReplay" class="game-primary-button" type="button">${gameText('game.replay')}</button>`;
+  const elapsedSeconds = gameSession.result.elapsedSeconds ?? Math.max(0, gameDurationSeconds() - gameSession.remainingSeconds);
+  $('#gameResult').innerHTML = `<div class="game-result-score">${f(points)}<small> / ${maxPoints}</small></div><div class="game-result-copy"><strong>${gameText(rank)}</strong><span>${gameText('game.resultSummary', { accuracy })} · ${formatGameDuration(elapsedSeconds)}</span></div><div class="game-result-actions"><button id="gameSaveScore" class="game-secondary-button" type="button" ${gameSession.result.saved ? 'disabled' : ''}>${gameText(gameSession.result.saved ? 'game.scoreSaved' : 'game.saveScore')}</button><button id="gameReplay" class="game-primary-button" type="button">${gameText('game.replay')}</button></div>`;
   $('#gameResult').hidden = false;
-  $('#gameReplay').addEventListener('click', createGameSession);
+  $('#gameReplay').addEventListener('click', () => {
+    gameSettings.targetPerHour = randomGameTarget(gameSettings.targetPerHour);
+    createGameSession();
+  });
+  $('#gameSaveScore').addEventListener('click', () => {
+    $('#gamePlayerName').value = '';
+    $('#gameSaveStatus').hidden = true;
+    $('#gameSaveDialog').showModal();
+    $('#gamePlayerName').focus();
+  });
 }
 function createGameSession() {
   const generated = createGameChallenge(gameSettings);
@@ -1081,6 +1096,33 @@ function createGameSession() {
   renderGameBoard();
   saveGameSession();
 }
+$('#gameSaveClose').addEventListener('click', () => $('#gameSaveDialog').close());
+$('#gameSaveCancel').addEventListener('click', () => $('#gameSaveDialog').close());
+$('#gameSaveForm').addEventListener('submit', async event => {
+  event.preventDefault();
+  if (!gameSession?.result || gameSession.result.saved) return;
+  const nickname = $('#gamePlayerName').value.trim();
+  if (!nickname) return;
+  const submit = $('#gameSaveSubmit');
+  const status = $('#gameSaveStatus');
+  submit.disabled = true;
+  status.hidden = false;
+  status.classList.remove('is-error');
+  status.textContent = gameText('game.savingScore');
+  try {
+    const leaderboard = await window.WIP_LEADERBOARD_READY;
+    const elapsedSeconds = gameSession.result.elapsedSeconds ?? Math.max(0, gameDurationSeconds() - gameSession.remainingSeconds);
+    await leaderboard.save({ nickname, ...gameSession.result, elapsedSeconds });
+    $('#gameSaveDialog').close();
+    gameSettings.targetPerHour = randomGameTarget(gameSettings.targetPerHour);
+    createGameSession();
+  } catch {
+    status.classList.add('is-error');
+    status.textContent = gameText('game.scoreSaveError');
+  } finally {
+    submit.disabled = false;
+  }
+});
 function openGame(previousTarget = null, previousSettings = null) {
   if (gameIsOpen) return;
   if (!gameSnapshot) gameSnapshot = captureMainSnapshot();
@@ -1170,12 +1212,7 @@ function closeGame() {
   $('#bGame').focus();
   saveGameSession();
 }
-$('#bGame').addEventListener('click', () => {
-  const previousSettings = gameSettings;
-  gameSession = null;
-  gameSettings = null;
-  openGame(previousSettings?.targetPerHour, previousSettings);
-});
+$('#bGame').addEventListener('click', openGame);
 $('#gameExit').addEventListener('click', closeGame);
 $('#gameStart').addEventListener('click', startGame);
 $('#gameFinish').addEventListener('click', finishGame);

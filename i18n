@@ -349,7 +349,7 @@
 
   Object.assign(messages.th, {
     'game.open': 'Game', 'game.exit': 'กลับหน้าหลัก', 'game.kicker': 'WIP CONTROL / TRAINING MODE',
-    'game.title': 'SHIFT SPRINT', 'game.settings': 'ตั้งค่าเกม', 'game.closeSettings': 'ปิด', 'game.cancel': 'ยกเลิก', 'game.applySettings': 'ใช้ค่านี้', 'game.shiftError': 'เวลาเลิกงานต้องอยู่หลังเวลาเริ่มงาน และอยู่ในช่วง 08:00–21:00', 'game.duration': 'เวลาเล่น', 'game.minutes': 'นาที',
+    'game.title': 'WIP CONTROL / TRAINING MODE', 'game.settings': 'ตั้งค่าเกม', 'game.closeSettings': 'ปิด', 'game.cancel': 'ยกเลิก', 'game.applySettings': 'ใช้ค่านี้', 'game.shiftError': 'เวลาเลิกงานต้องอยู่หลังเวลาเริ่มงาน และอยู่ในช่วง 08:00–21:00', 'game.duration': 'เวลาเล่น', 'game.minutes': 'นาที',
     'game.start': 'เริ่มเกม', 'game.finish': 'ส่งคำตอบ', 'game.ready': 'อ่านข้อมูลในตาราง แล้วกรอกค่าที่ต้องคำนวณ',
     'game.playing': 'จับเวลาแล้ว! คิดให้แม่นและกรอกให้ครบ', 'game.done': 'จบรอบ ตรวจคำตอบด้านล่าง',
     'game.allComplete': 'ครบทุกชั่วโมงแล้ว กดส่งคำตอบเพื่อดูคะแนน',
@@ -372,11 +372,13 @@
     'game.explain.tgtWhy': 'เกมกระจายยอดขาดจากเป้าพื้นฐานสะสมตามสัดส่วนนาทีของคาบนี้ต่อเวลาทำงานที่เหลือ ยิ่งเหลือเวลาน้อย ยอดเพิ่มต่อคาบอาจสูงขึ้น สูตรนี้เป็นสูตรจำลอง ไม่ใช่สูตร backend ที่ยืนยันแล้ว',
     'game.explain.bal': 'BALANCE WIP = BALANCE ก่อนหน้า + ACTUAL LOAD − QC PASS',
     'game.explain.balWhy': 'งานโหลดเข้าเพิ่ม WIP ส่วนงานที่ QC ผ่านจะถูกหักออก',
-    'game.replay': 'เริ่มเกมใหม่'
+    'game.replay': 'เริ่มเกมใหม่', 'game.saveScore': 'บันทึกคะแนน', 'game.scoreSaved': 'บันทึกแล้ว', 'game.saveTitle': 'บันทึกคะแนน', 'game.playerName': 'ชื่อหรือฉายา', 'game.savingScore': 'กำลังบันทึกคะแนน...', 'game.scoreSaveError': 'บันทึกคะแนนไม่สำเร็จ กรุณาลองอีกครั้ง',
+    'game.openLeaderboard': 'ทำเนียบผู้ชนะ', 'game.leaderboardBack': 'กลับสู่เกม', 'game.leaderboardRefresh': 'โหลดใหม่', 'game.leaderboardSubtitle': 'คะแนนสูงสุดของผู้เล่น', 'game.leaderboardDocumentTitle': 'ทำเนียบผู้ชนะ WIP Control',
+    'game.leaderboardTitle': 'ทำเนียบผู้ชนะ WIP Control', 'game.leaderboardTop': 'TOP 10', 'game.leaderboardRank': 'อันดับ', 'game.leaderboardPlayer': 'ผู้เล่น', 'game.leaderboardScore': 'คะแนน', 'game.leaderboardAccuracy': 'ความแม่นยำ', 'game.leaderboardTime': 'เวลา', 'game.leaderboardDateTime': 'วันที่ เวลา', 'game.leaderboardLoading': 'กำลังโหลดอันดับ...', 'game.leaderboardEmpty': 'ยังไม่มีคะแนนที่บันทึก', 'game.leaderboardError': 'โหลดกระดานคะแนนไม่สำเร็จ', 'game.elapsed': '{minutes} นาที {seconds} วินาที'
   });
   Object.assign(messages.en, {
     'game.open': 'Game', 'game.exit': 'Back to simulator', 'game.kicker': 'WIP CONTROL / TRAINING MODE',
-    'game.title': 'SHIFT SPRINT', 'game.settings': 'Game settings', 'game.closeSettings': 'Close', 'game.cancel': 'Cancel', 'game.applySettings': 'Apply settings', 'game.shiftError': 'Shift end must be later than shift start and within 08:00–21:00.', 'game.duration': 'Time', 'game.minutes': 'min',
+    'game.title': 'WIP CONTROL / TRAINING MODE', 'game.settings': 'Game settings', 'game.closeSettings': 'Close', 'game.cancel': 'Cancel', 'game.applySettings': 'Apply settings', 'game.shiftError': 'Shift end must be later than shift start and within 08:00–21:00.', 'game.duration': 'Time', 'game.minutes': 'min',
     'game.start': 'Start round', 'game.finish': 'Submit', 'game.ready': 'Read the shift data, then calculate the missing values.',
     'game.playing': 'Clock is running. Stay sharp and fill every answer.', 'game.done': 'Round complete. Review your answers below.',
     'game.allComplete': 'All hours complete. Submit to see your score.',
@@ -399,11 +401,13 @@
     'game.explain.tgtWhy': 'The game distributes the cumulative base-target shortfall in proportion to this period’s minutes and the remaining work time. Less time remaining can mean a larger extra target per period. This is the simulator formula, not a confirmed backend formula.',
     'game.explain.bal': 'BALANCE WIP = Previous BALANCE + ACTUAL LOAD − QC PASS',
     'game.explain.balWhy': 'Loaded pieces increase WIP; QC-passed pieces are subtracted.',
-    'game.replay': 'Play again'
+    'game.replay': 'Play again', 'game.saveScore': 'Save score', 'game.scoreSaved': 'Saved', 'game.saveTitle': 'Save score', 'game.playerName': 'Name or nickname', 'game.savingScore': 'Saving score...', 'game.scoreSaveError': 'Could not save your score. Please try again.',
+    'game.openLeaderboard': 'Hall of Fame', 'game.leaderboardBack': 'Back to game', 'game.leaderboardRefresh': 'Refresh', 'game.leaderboardSubtitle': 'Top scores from players', 'game.leaderboardDocumentTitle': 'WIP Control Hall of Fame',
+    'game.leaderboardTitle': 'WIP CONTROL HALL OF FAME', 'game.leaderboardTop': 'TOP 10', 'game.leaderboardRank': 'Rank', 'game.leaderboardPlayer': 'Player', 'game.leaderboardScore': 'Score', 'game.leaderboardAccuracy': 'Accuracy', 'game.leaderboardTime': 'Time', 'game.leaderboardDateTime': 'Date / time', 'game.leaderboardLoading': 'Loading scores...', 'game.leaderboardEmpty': 'No scores saved yet', 'game.leaderboardError': 'Could not load the leaderboard', 'game.elapsed': '{minutes} min {seconds} sec'
   });
   Object.assign(messages.vi, {
     'game.open': 'Trò chơi', 'game.exit': 'Quay lại mô phỏng', 'game.kicker': 'WIP CONTROL / CHẾ ĐỘ LUYỆN TẬP',
-    'game.title': 'SHIFT SPRINT', 'game.settings': 'Cài đặt trò chơi', 'game.closeSettings': 'Đóng', 'game.cancel': 'Hủy', 'game.applySettings': 'Áp dụng', 'game.shiftError': 'Giờ kết thúc phải sau giờ bắt đầu và trong khoảng 08:00–21:00.', 'game.duration': 'Thời gian', 'game.minutes': 'phút',
+    'game.title': 'WIP CONTROL / TRAINING MODE', 'game.settings': 'Cài đặt trò chơi', 'game.closeSettings': 'Đóng', 'game.cancel': 'Hủy', 'game.applySettings': 'Áp dụng', 'game.shiftError': 'Giờ kết thúc phải sau giờ bắt đầu và trong khoảng 08:00–21:00.', 'game.duration': 'Thời gian', 'game.minutes': 'phút',
     'game.start': 'Bắt đầu', 'game.finish': 'Nộp bài', 'game.ready': 'Đọc dữ liệu ca rồi tính các giá trị còn thiếu.',
     'game.playing': 'Đồng hồ đã chạy. Tập trung và điền đủ đáp án.', 'game.done': 'Hoàn thành lượt chơi. Xem lại đáp án bên dưới.',
     'game.allComplete': 'Đã hoàn thành tất cả khung giờ. Nộp bài để xem điểm.',
@@ -426,11 +430,13 @@
     'game.explain.tgtWhy': 'Trò chơi phân bổ phần thiếu mục tiêu cơ bản lũy kế theo tỷ lệ phút của khung giờ này trên thời gian làm việc còn lại. Thời gian còn ít có thể làm phần tăng mỗi khung giờ cao hơn. Đây là công thức mô phỏng, chưa phải công thức backend đã xác nhận.',
     'game.explain.bal': 'BALANCE WIP = BALANCE trước đó + ACTUAL LOAD − QC PASS',
     'game.explain.balWhy': 'Hàng được nạp làm tăng WIP; hàng QC đạt được trừ khỏi số dư.',
-    'game.replay': 'Chơi lại'
+    'game.replay': 'Chơi lại', 'game.saveScore': 'Lưu điểm', 'game.scoreSaved': 'Đã lưu', 'game.saveTitle': 'Lưu điểm', 'game.playerName': 'Tên hoặc biệt danh', 'game.savingScore': 'Đang lưu điểm...', 'game.scoreSaveError': 'Không thể lưu điểm. Vui lòng thử lại.',
+    'game.openLeaderboard': 'Bảng vinh danh', 'game.leaderboardBack': 'Quay lại trò chơi', 'game.leaderboardRefresh': 'Tải lại', 'game.leaderboardSubtitle': 'Điểm số cao nhất của người chơi', 'game.leaderboardDocumentTitle': 'Bảng vinh danh WIP Control',
+    'game.leaderboardTitle': 'BẢNG VINH DANH WIP CONTROL', 'game.leaderboardTop': 'TOP 10', 'game.leaderboardRank': 'Hạng', 'game.leaderboardPlayer': 'Người chơi', 'game.leaderboardScore': 'Điểm', 'game.leaderboardAccuracy': 'Độ chính xác', 'game.leaderboardTime': 'Thời gian', 'game.leaderboardDateTime': 'Ngày giờ', 'game.leaderboardLoading': 'Đang tải bảng xếp hạng...', 'game.leaderboardEmpty': 'Chưa có điểm nào được lưu', 'game.leaderboardError': 'Không thể tải bảng xếp hạng', 'game.elapsed': '{minutes} phút {seconds} giây'
   });
   Object.assign(messages.lo, {
     'game.open': 'ເກມ', 'game.exit': 'ກັບໄປໜ້າຈຳລອງ', 'game.kicker': 'WIP CONTROL / ໂໝດຝຶກຫັດ',
-    'game.title': 'SHIFT SPRINT', 'game.settings': 'ຕັ້ງຄ່າເກມ', 'game.closeSettings': 'ປິດ', 'game.cancel': 'ຍົກເລີກ', 'game.applySettings': 'ນຳໃຊ້ຄ່າ', 'game.shiftError': 'ເວລາເລີກວຽກຕ້ອງຫຼັງເວລາເລີ່ມວຽກ ແລະຢູ່ໃນຊ່ວງ 08:00–21:00.', 'game.duration': 'ເວລາ', 'game.minutes': 'ນາທີ',
+    'game.title': 'WIP CONTROL / TRAINING MODE', 'game.settings': 'ຕັ້ງຄ່າເກມ', 'game.closeSettings': 'ປິດ', 'game.cancel': 'ຍົກເລີກ', 'game.applySettings': 'ນຳໃຊ້ຄ່າ', 'game.shiftError': 'ເວລາເລີກວຽກຕ້ອງຫຼັງເວລາເລີ່ມວຽກ ແລະຢູ່ໃນຊ່ວງ 08:00–21:00.', 'game.duration': 'ເວລາ', 'game.minutes': 'ນາທີ',
     'game.start': 'ເລີ່ມເກມ', 'game.finish': 'ສົ່ງຄຳຕອບ', 'game.ready': 'ອ່ານຂໍ້ມູນກະ ແລ້ວຄຳນວນຄ່າທີ່ຂາດ.',
     'game.playing': 'ເລີ່ມຈັບເວລາແລ້ວ! ຄິດໃຫ້ແມ່ນ ແລະຕື່ມໃຫ້ຄົບ.', 'game.done': 'ຈົບຮອບແລ້ວ. ກວດຄຳຕອບດ້ານລຸ່ມ.',
     'game.allComplete': 'ຄົບທຸກຊົ່ວໂມງແລ້ວ. ກົດສົ່ງຄຳຕອບເພື່ອເບິ່ງຄະແນນ.',
@@ -453,7 +459,9 @@
     'game.explain.tgtWhy': 'ເກມແບ່ງຍອດຂາດເປົ້າພື້ນຖານສະສົມຕາມສັດສ່ວນນາທີຂອງຊ່ວງນີ້ທຽບກັບເວລາເຮັດວຽກທີ່ເຫຼືອ. ເວລາຍິ່ງເຫຼືອໜ້ອຍ ຍອດເພີ່ມຕໍ່ຊ່ວງອາດສູງຂຶ້ນ. ນີ້ແມ່ນສູດຈຳລອງ ບໍ່ແມ່ນສູດ backend ທີ່ຢືນຢັນແລ້ວ.',
     'game.explain.bal': 'BALANCE WIP = BALANCE ກ່ອນໜ້າ + ACTUAL LOAD − QC PASS',
     'game.explain.balWhy': 'ວຽກທີ່ໂຫຼດເຂົ້າເພີ່ມ WIP; ວຽກທີ່ QC ຜ່ານຈະຖືກຫັກອອກ.',
-    'game.replay': 'ຫຼິ້ນອີກຄັ້ງ'
+    'game.replay': 'ຫຼິ້ນອີກຄັ້ງ', 'game.saveScore': 'ບັນທຶກຄະແນນ', 'game.scoreSaved': 'ບັນທຶກແລ້ວ', 'game.saveTitle': 'ບັນທຶກຄະແນນ', 'game.playerName': 'ຊື່ ຫຼື ນາມແຝງ', 'game.savingScore': 'ກຳລັງບັນທຶກ...', 'game.scoreSaveError': 'ບັນທຶກຄະແນນບໍ່ສຳເລັດ. ກະລຸນາລອງໃໝ່.',
+    'game.openLeaderboard': 'ຫໍກຽດຕິຍົດ', 'game.leaderboardBack': 'ກັບສູ່ເກມ', 'game.leaderboardRefresh': 'ໂຫຼດໃໝ່', 'game.leaderboardSubtitle': 'ຄະແນນສູງສຸດຂອງຜູ້ຫຼິ້ນ', 'game.leaderboardDocumentTitle': 'ຫໍກຽດຕິຍົດ WIP Control',
+    'game.leaderboardTitle': 'ຫໍກຽດຕິຍົດ WIP CONTROL', 'game.leaderboardTop': 'TOP 10', 'game.leaderboardRank': 'ອັນດັບ', 'game.leaderboardPlayer': 'ຜູ້ຫຼິ້ນ', 'game.leaderboardScore': 'ຄະແນນ', 'game.leaderboardAccuracy': 'ຄວາມແມ່ນຍຳ', 'game.leaderboardTime': 'ເວລາ', 'game.leaderboardDateTime': 'ວັນທີ ເວລາ', 'game.leaderboardLoading': 'ກຳລັງໂຫຼດຄະແນນ...', 'game.leaderboardEmpty': 'ຍັງບໍ່ມີຄະແນນທີ່ບັນທຶກ', 'game.leaderboardError': 'ໂຫຼດກະດານຄະແນນບໍ່ສຳເລັດ', 'game.elapsed': '{minutes} ນາທີ {seconds} ວິນາທີ'
   });
 
   const storedLanguage = localStorage.getItem('wip-language');
@@ -467,7 +475,7 @@
   };
   const apply = () => {
     document.documentElement.lang = language;
-    document.title = t('page.documentTitle');
+    document.title = t(document.body.dataset.documentTitle || 'page.documentTitle');
     document.querySelectorAll('[data-i18n]').forEach(node => { node.textContent = t(node.dataset.i18n); });
     document.querySelectorAll('[data-i18n-html]').forEach(node => { node.innerHTML = t(node.dataset.i18nHtml); });
     document.querySelectorAll('[data-i18n-title]').forEach(node => { node.title = t(node.dataset.i18nTitle); });

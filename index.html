@@ -184,10 +184,11 @@
 <main id="gameScreen" class="game-screen" aria-labelledby="gameTitle" hidden>
   <div class="game-topbar">
     <button id="gameExit" class="game-icon-button" type="button" aria-label="กลับหน้าหลัก" data-i18n-aria="game.exit" title="กลับหน้าหลัก" data-i18n-title="game.exit"><span aria-hidden="true">&#8592;</span></button>
-    <div class="game-brand"><span class="game-kicker" data-i18n="game.kicker">WIP CONTROL / TRAINING MODE</span><h1 id="gameTitle" data-i18n="game.title">SHIFT SPRINT</h1></div>
+    <div class="game-brand"><h1 id="gameTitle" data-i18n="game.title">WIP CONTROL / TRAINING MODE</h1></div>
     <div class="game-top-controls">
       <div id="gameTimer" class="game-timer" role="timer" aria-live="off">05:00</div>
       <button id="gameStart" class="game-primary-button" type="button" data-i18n="game.start">เริ่มเกม</button>
+      <a class="game-settings-button" href="leaderboard.html" data-i18n="game.openLeaderboard">ทำเนียบผู้ชนะ</a>
       <button id="gameSettingsOpen" class="game-settings-button" type="button"><span aria-hidden="true">&#9881;</span><span data-i18n="game.settings">ตั้งค่าเกม</span></button>
       <button id="gameFinish" class="game-secondary-button" type="button" data-i18n="game.finish" hidden>ส่งคำตอบ</button>
     </div>
@@ -218,6 +219,21 @@
     <span id="gameProgressText" class="game-progress-text">0 / 0</span>
   </div>
   <section id="gameResult" class="game-result" aria-live="polite" hidden></section>
+  <dialog id="gameSaveDialog" class="game-answer-dialog" aria-labelledby="gameSaveTitle">
+    <form id="gameSaveForm" class="game-save-form">
+      <div class="game-answer-dialog-content">
+        <button id="gameSaveClose" class="game-icon-button game-answer-close" type="button" aria-label="ปิด" data-i18n-aria="game.closeSettings">&#215;</button>
+        <h2 id="gameSaveTitle" data-i18n="game.saveTitle">บันทึกคะแนน</h2>
+        <label for="gamePlayerName" class="game-save-label" data-i18n="game.playerName">ชื่อหรือฉายา</label>
+        <input id="gamePlayerName" class="game-save-name" type="text" maxlength="24" autocomplete="nickname" required>
+        <p id="gameSaveStatus" class="game-save-status" role="status" hidden></p>
+        <div class="game-save-actions">
+          <button id="gameSaveCancel" class="game-secondary-button" type="button" data-i18n="game.cancel">ยกเลิก</button>
+          <button id="gameSaveSubmit" class="game-primary-button" type="submit" data-i18n="game.saveScore">บันทึกคะแนน</button>
+        </div>
+      </div>
+    </form>
+  </dialog>
   <dialog id="gameAnswerDialog" class="game-answer-dialog" aria-labelledby="gameAnswerTitle">
     <div class="game-answer-dialog-content">
       <button id="gameAnswerClose" class="game-icon-button game-answer-close" type="button" aria-label="ปิด" data-i18n-aria="game.closeSettings">&#215;</button>
@@ -234,6 +250,8 @@
  
 <script src="demo-data.js"></script>
 <script src="i18n"></script>
+<script src="firebase-config.js"></script>
+<script src="leaderboard.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/flatpickr@4.6.13"></script>
 <script src="logic.js"></script>
 <script src="spf-hourly.js"></script>

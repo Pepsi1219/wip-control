@@ -40,9 +40,11 @@ header p{margin:4px 0 0;color:var(--mut);font-size:14px}
 .game-settings-button{display:flex;align-items:center;gap:7px;min-height:40px;padding:0 12px;border:1px solid var(--game-line);border-radius:5px;background:var(--game-raised);color:var(--game-ink);font:inherit;font-weight:700;cursor:pointer}
 .game-settings-button span:first-child{color:var(--game-lime);font-size:18px}
 .game-settings-button:disabled{opacity:.5;cursor:not-allowed}
-.game-settings-dialog{width:min(520px,calc(100vw - 28px));padding:0;border:1px solid var(--game-dialog-border);border-radius:7px;background:var(--game-panel);color:var(--game-ink);box-shadow:0 24px 80px var(--game-shadow)}
+.game-settings-dialog{width:min(620px,calc(100vw - 28px));max-height:calc(100dvh - 28px);overflow:hidden;padding:0;border:1px solid var(--game-dialog-border);border-radius:7px;background:var(--game-panel);color:var(--game-ink);box-shadow:0 24px 80px var(--game-shadow)}
 .game-settings-dialog::backdrop{background:var(--game-backdrop);backdrop-filter:blur(3px)}
-.game-settings-dialog form{padding:22px}
+.game-settings-dialog form{max-height:calc(100dvh - 28px);overflow-y:auto;scrollbar-width:none;-ms-overflow-style:none;padding:22px}
+.game-settings-dialog form::-webkit-scrollbar{display:none}
+body:has(.game-settings-dialog[open]){overflow:hidden}
 .game-settings-heading{display:flex;justify-content:space-between;align-items:center;margin-bottom:20px}
 .game-settings-heading h2{margin:5px 0 0;font-size:21px}
 .game-settings-fields{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
@@ -52,6 +54,11 @@ header p{margin:4px 0 0;color:var(--mut);font-size:14px}
 .game-duration-input{display:flex;align-items:center;gap:9px;color:var(--game-ink)}
 .game-duration-input input{width:100px}
 .game-settings-error{margin:12px 0 0;color:var(--game-error);font:13px "Segoe UI",sans-serif}
+.game-schedule-table{margin-top:18px;color:var(--game-ink)}
+.game-schedule-table th,.game-schedule-table td{padding:5px 8px}
+.game-settings-dialog table.game-schedule-table thead th{background:var(--game-raised);color:var(--game-muted)}
+.game-settings-dialog table.game-schedule-table tfoot th,.game-settings-dialog table.game-schedule-table tfoot td{background:var(--game-deep);color:var(--game-lime)}
+.game-schedule-table .schedule-minute-input{width:72px;border-color:var(--game-line);background:var(--game-deep);color:var(--game-ink)}
 .game-settings-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:22px}
 .game-settings-actions button{min-height:40px;padding:0 16px}
 .game-timer{min-width:88px;color:var(--game-lime);font:800 24px/1 "Consolas",monospace;font-variant-numeric:tabular-nums;text-align:center}
@@ -91,6 +98,9 @@ header p{margin:4px 0 0;color:var(--mut);font-size:14px}
 .game-answer-verdict.is-correct{color:var(--game-success)}
 .game-answer-verdict.is-review{color:var(--game-warning)}
 .game-table-shell{display:flex;flex:1;min-height:300px;flex-direction:column;overflow:hidden;border:1px solid var(--game-line);border-radius:6px;background:var(--game-table)}
+#tbl col.work-minutes-column,#tbl .work-minutes-column{display:none}
+#gameScreen:not([hidden]) #tbl col.work-minutes-column{display:table-column}
+#gameScreen:not([hidden]) #tbl .work-minutes-column{display:table-cell}
 .game-table-heading{display:flex;align-items:center;gap:14px;padding:10px 14px;border-bottom:1px solid var(--game-line);color:var(--game-lime);font-size:12px;font-weight:800;letter-spacing:.5px;flex:none}
 .game-table-heading #gameRoundLabel{color:var(--game-muted);font:11px "Consolas",monospace;letter-spacing:0}
 .game-table-hint{margin-left:auto;color:var(--game-muted);font-family:"Segoe UI",sans-serif;font-size:11px;font-weight:400;letter-spacing:0}

@@ -68,11 +68,11 @@
     </div>
     <div class="tblcard">
       <table class="spf" id="tbl">
-        <colgroup><col><col><col><col><col><col><col></colgroup>
-        <thead><tr><th data-i18n="metric.hourlyOutput">Hourly Output</th><th data-i18n="metric.tl">TARGET LOAD</th><th data-i18n="metric.load">ACTUAL LOAD</th><th data-i18n="metric.tgt">HOURLY TARGET</th><th data-i18n="metric.qc">QC PASS</th><th data-i18n="metric.bal">BALANCE WIP</th><th data-i18n="metric.fn">SCAN BOX</th></tr></thead>
+        <colgroup><col><col class="work-minutes-column"><col><col><col><col><col><col></colgroup>
+        <thead><tr><th data-i18n="metric.hourlyOutput">Hourly Output</th><th class="work-minutes-column" data-i18n="metric.workMinutes">นาทีทำงาน</th><th data-i18n="metric.tl">TARGET LOAD</th><th data-i18n="metric.load">ACTUAL LOAD</th><th data-i18n="metric.tgt">HOURLY TARGET</th><th data-i18n="metric.qc">QC PASS</th><th data-i18n="metric.bal">BALANCE WIP</th><th data-i18n="metric.fn">SCAN BOX</th></tr></thead>
         <tbody id="tb"></tbody>
         <tfoot><tr>
-          <th data-i18n="common.summary">Summary</th>
+          <th data-i18n="common.summary">Summary</th><td class="work-minutes-column" data-i="-1" data-c="minutes"></td>
           <td data-i="-1" data-c="tl"></td><td data-i="-1" data-c="load"></td><td data-i="-1" data-c="tgt"></td>
           <td data-i="-1" data-c="qc"></td><td data-i="-1" data-c="bal"></td><td data-i="-1" data-c="fn"></td>
         </tr></tfoot>
@@ -202,6 +202,11 @@
         <label for="gameShiftEnd"><span data-i18n="settings.shiftEnd">เวลาเลิกงาน</span><input id="gameShiftEnd" type="time" min="08:00" max="21:00" required aria-describedby="gameSettingsError" aria-invalid="false"></label>
         <label for="gameDurationSetting"><span data-i18n="game.duration">เวลาเล่น</span><span class="game-duration-input"><input id="gameDurationSetting" type="number" min="1" max="30" step="1" value="5" required><span data-i18n="game.minutes">นาที</span></span></label>
       </div>
+      <table class="set game-schedule-table">
+        <thead><tr><th scope="col" data-i18n="schedule.period">ช่วงเวลา</th><th scope="col" data-i18n="schedule.minutes">นาทีทำงาน</th><th scope="col" data-i18n="schedule.baseTarget">เป้าพื้นฐาน</th></tr></thead>
+        <tbody id="gameScheduleRows"></tbody>
+        <tfoot><tr><th scope="row" data-i18n="common.total">รวม</th><td id="gameScheduleMinutesTotal">0</td><td id="gameScheduleBaseTotal">0</td></tr></tfoot>
+      </table>
       <p id="gameSettingsError" class="game-settings-error" role="alert" hidden data-i18n="game.shiftError">เวลาเลิกงานต้องอยู่หลังเวลาเริ่มงาน</p>
       <div class="game-settings-actions"><button id="gameSettingsCancel" class="game-secondary-button" type="button" data-i18n="game.cancel">ยกเลิก</button><button class="game-primary-button" type="submit" data-i18n="game.applySettings">ใช้ค่านี้</button></div>
     </form>

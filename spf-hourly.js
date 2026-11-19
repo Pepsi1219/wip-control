@@ -259,6 +259,7 @@ function build() {
   S.rows.forEach((r, i) => {
     const tr = document.createElement('tr');
     tr.innerHTML = `<th data-i="${i}">${r.l}</th>
+      <td class="work-minutes-column" data-i="${i}" data-c="minutes"><span></span></td>
       <td data-i="${i}" data-c="tl"><span></span></td>
       <td data-i="${i}" data-c="load"><div class="cellwrap"><input class="cell w5" type="number" min="0" data-k="load" data-i="${i}"><input class="cell-slider" type="range" min="0" max="200" step="1" tabindex="-1" aria-hidden="true"></div></td>
       <td data-i="${i}" data-c="tgt"><span></span></td>
@@ -826,6 +827,13 @@ syncSideHeight();
 function randomInt(min, max) {
   return Math.floor(Math.random() * (max - min + 1)) + min;
 }
+function randomGameTarget(previousTarget) {
+  const configuredTarget = Math.max(1, Math.round(N($('#targetPerHour').value)));
+  const minTarget = Math.max(1, Math.floor(configuredTarget * 0.8));
+  const maxTarget = Math.max(minTarget + 1, Math.ceil(configuredTarget * 1.2));
+  const target = randomInt(minTarget, maxTarget);
+  return target === previousTarget ? (target === maxTarget ? minTarget : target + 1) : target;
+}
 function createGameChallenge(settings) {
   const [startHour, startMinute] = settings.shiftStart.split(':').map(Number);
   const [endHour, endMinute] = settings.shiftEnd.split(':').map(Number);
@@ -833,14 +841,16 @@ function createGameChallenge(settings) {
   const end = endHour * 60 + endMinute;
   const open = settings.openingWip;
   const targetPerHour = settings.targetPerHour;
-  const challenge = SPF_LOGIC.makeShiftData({ open, rows: [] }, clockValue(start), clockValue(end), targetPerHour);
+  const challenge = SPF_LOGIC.makeShiftData({ open, rows: settings.schedule || [] }, clockValue(start), clockValue(end), targetPerHour);
   let runningWip = open;
   challenge.rows.forEach(row => {
-    const maxLoad = Math.max(15, Math.round(targetPerHour * 1.35));
-    row.load = randomInt(Math.min(maxLoad, Math.max(15, Math.round(targetPerHour * 0.45))), maxLoad);
+    const maxLoad = Math.round(row.b * 1.35);
+    const minLoad = Math.min(maxLoad, Math.round(row.b * 0.45));
+    row.load = randomInt(minLoad, maxLoad);
     const available = runningWip + row.load;
-    row.qc = randomInt(Math.max(0, Math.round(targetPerHour * 0.2)), Math.min(available, Math.round(targetPerHour * 1.15)));
-    row.fn = randomInt(0, Math.round(targetPerHour * 1.25));
+    const maxQc = Math.min(available, Math.round(row.b * 1.15));
+    row.qc = randomInt(Math.min(maxQc, Math.round(row.b * 0.2)), maxQc);
+    row.fn = randomInt(0, Math.round(row.b * 1.25));
     row.loadEntered = row.qcEntered = row.fnEntered = true;
     runningWip = available - row.qc;
   });
@@ -884,6 +894,7 @@ function updateGameSummary() {
   cells['-1_tgt'].textContent = sumField('tgt');
   const lastBalance = [...visibleEntries].reverse().find(entry => entry.bal !== null);
   cells['-1_bal'].textContent = lastBalance ? f(lastBalance.bal) : '—';
+  cells['-1_minutes'].textContent = f(S.rows.slice(0, visibleCount).reduce((sum, row) => sum + N(row.m), 0));
   ['load', 'qc', 'fn'].forEach(field => {
     const total = S.rows.slice(0, visibleCount).reduce((sum, row) => sum + N(row[field]), 0);
     cells[`-1_${field}`].textContent = f(total);
@@ -945,6 +956,7 @@ function renderGameBoard() {
       qc: row.qc,
       fn: row.fn
     };
+    cells[`${index}_minutes`].firstElementChild.textContent = f(row.m);
     ['tl', 'tgt', 'bal', 'load', 'qc', 'fn'].forEach(field => {
       const cell = cells[`${index}_${field}`];
       if (!cell) return;
@@ -1069,16 +1081,17 @@ function createGameSession() {
   renderGameBoard();
   saveGameSession();
 }
-function openGame() {
+function openGame(previousTarget = null, previousSettings = null) {
   if (gameIsOpen) return;
   if (!gameSnapshot) gameSnapshot = captureMainSnapshot();
   if (!gameSession) {
     gameSettings = {
-      openingWip: N(S.open),
-      targetPerHour: Math.max(1, N($('#targetPerHour').value)),
-      shiftStart: clockValue(shiftStartMinutes()),
-      shiftEnd: clockValue(pickerMinutes(shiftEndPicker)),
-      duration: 5
+      openingWip: 0,
+      targetPerHour: randomGameTarget(previousTarget),
+      shiftStart: previousSettings?.shiftStart || clockValue(shiftStartMinutes()),
+      shiftEnd: previousSettings?.shiftEnd || clockValue(pickerMinutes(shiftEndPicker)),
+      duration: previousSettings?.duration || 5,
+      schedule: previousSettings?.schedule || S.rows.map(({ l, m, b }) => ({ l, m, b }))
     };
   }
   gameIsOpen = true;
@@ -1157,7 +1170,12 @@ function closeGame() {
   $('#bGame').focus();
   saveGameSession();
 }
-$('#bGame').addEventListener('click', openGame);
+$('#bGame').addEventListener('click', () => {
+  const previousSettings = gameSettings;
+  gameSession = null;
+  gameSettings = null;
+  openGame(previousSettings?.targetPerHour, previousSettings);
+});
 $('#gameExit').addEventListener('click', closeGame);
 $('#gameStart').addEventListener('click', startGame);
 $('#gameFinish').addEventListener('click', finishGame);
@@ -1169,7 +1187,41 @@ function openGameSettings() {
   $('#gameShiftEnd').value = gameSettings.shiftEnd;
   $('#gameDurationSetting').value = String(gameSettings.duration);
   syncGameShiftTimeConstraints();
+  syncGameScheduleTable();
   $('#gameSettingsDialog').showModal();
+}
+
+function syncGameScheduleTable() {
+  const start = timeInputMinutes($('#gameShiftStart').value);
+  const end = timeInputMinutes($('#gameShiftEnd').value);
+  if (!Number.isFinite(start) || !Number.isFinite(end) || end <= start) return [];
+
+  const body = $('#gameScheduleRows');
+  const currentRows = [...body.rows].map(row => ({
+    l: row.cells[0].textContent,
+    m: N(row.querySelector('[data-game-schedule-minute]')?.value)
+  }));
+  const sourceRows = currentRows.length ? currentRows : gameSettings.schedule || gameSession?.challenge.rows || S.rows;
+  const schedule = SPF_LOGIC.makeShiftData(
+    { open: N($('#gameOpeningWip').value), rows: sourceRows },
+    clockValue(start),
+    clockValue(end),
+    Math.max(1, N($('#gameTargetPerHour').value))
+  ).rows;
+
+  const needsRebuild = schedule.length !== body.rows.length || schedule.some((row, i) => body.rows[i]?.cells[0].textContent !== row.l);
+  if (needsRebuild) {
+    body.innerHTML = schedule.map((row, i) => `<tr><td>${row.l}</td><td><input class="schedule-minute-input" type="number" min="0" max="${SPF_LOGIC.periodDuration(row.l)}" step="1" value="${N(row.m)}" data-game-schedule-minute="${i}" aria-label="${gameText('schedule.minutesFor', { period: row.l })}"></td><td></td></tr>`).join('');
+  }
+  schedule.forEach((row, i) => {
+    const input = body.rows[i].querySelector('[data-game-schedule-minute]');
+    input.max = String(SPF_LOGIC.periodDuration(row.l));
+    if (document.activeElement !== input) input.value = String(row.m);
+    body.rows[i].cells[2].textContent = f(row.b);
+  });
+  $('#gameScheduleMinutesTotal').textContent = f(schedule.reduce((total, row) => total + row.m, 0));
+  $('#gameScheduleBaseTotal').textContent = f(schedule.reduce((total, row) => total + row.b, 0));
+  return schedule;
 }
 
 function syncGameShiftTimeConstraints() {
@@ -1198,6 +1250,10 @@ $('#gameSettingsClose').addEventListener('click', () => $('#gameSettingsDialog')
 $('#gameSettingsCancel').addEventListener('click', () => $('#gameSettingsDialog').close());
 $('#gameShiftStart').addEventListener('input', syncGameShiftTimeConstraints);
 $('#gameShiftEnd').addEventListener('input', syncGameShiftTimeConstraints);
+$('#gameShiftStart').addEventListener('input', syncGameScheduleTable);
+$('#gameShiftEnd').addEventListener('input', syncGameScheduleTable);
+$('#gameTargetPerHour').addEventListener('input', syncGameScheduleTable);
+$('#gameScheduleRows').addEventListener('input', syncGameScheduleTable);
 $('#gameSettingsForm').addEventListener('submit', event => {
   event.preventDefault();
   const form = event.currentTarget;
@@ -1210,7 +1266,8 @@ $('#gameSettingsForm').addEventListener('submit', event => {
     targetPerHour: Math.round(N($('#gameTargetPerHour').value)),
     shiftStart: start,
     shiftEnd: end,
-    duration: Math.round(N($('#gameDurationSetting').value))
+    duration: Math.round(N($('#gameDurationSetting').value)),
+    schedule: syncGameScheduleTable().map(({ l, m, b }) => ({ l, m, b }))
   };
   $('#gameSettingsDialog').close();
   createGameSession();

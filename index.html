@@ -78,6 +78,12 @@
         </tr></tfoot>
       </table>
     </div>
+    <section class="forecast-strip" role="group" aria-label="สรุปเป้าการผลิต" data-i18n-aria="forecast.summaryLabel">
+      <div><span data-i18n="forecast.dailyTarget">เป้าหมายทั้งวัน</span><strong id="forecastDailyTarget">0</strong></div>
+      <div><span data-i18n="forecast.actualQc">QC ที่จบแล้ว</span><strong id="forecastActualQc">0</strong></div>
+      <div><span data-i18n="forecast.remaining">ยังต้องผลิต</span><strong id="forecastRemaining">0</strong></div>
+      <div><span data-i18n="forecast.projected">คาดการณ์สิ้นวัน</span><strong id="forecastProjected">0</strong></div>
+    </section>
   </div>
   <div class="side-column">
     <div class="toolbar side-save side-toolbar">
@@ -116,9 +122,8 @@
       </article>
       <article class="formula-summary-item" data-formula="tgt" data-i18n-html="formula.tgt">
         <h3>HOURLY TARGET (เป้าของชั่วโมงนั้น)</h3>
-        <p>เป้าปกติของชั่วโมงนั้น <b>บวกยอดที่ต้องไล่ตามให้ทัน</b></p>
-        <p>ถ้าชั่วโมงก่อนๆ ทำได้ไม่ถึงเป้า ยอดที่ขาดจะถูกแบ่งไปเพิ่มในชั่วโมงที่เหลือของวัน โดยแบ่งตามเวลาทำงานที่เหลือ</p>
-        <p><b>ตัวอย่าง:</b> ชั่วโมงแรกเป้า 75 ทำ QC ได้ 25 ขาดไป 50 เหลือเวลาทำงาน 7 ชั่วโมง ชั่วโมงที่สองจึงรับยอดเพิ่มประมาณ 7 ชิ้น เป้าเป็น 75 + 7 = 82 ยิ่งใกล้เลิกงาน เวลาเหลือน้อย ยอดที่ต้องไล่ตามยิ่งสูง ชั่วโมงสุดท้ายเป้าจึงพุ่งเป็น 264</p>
+        <p>คาบที่จบแล้วเก็บเป้าประวัติไว้ ส่วนยอดที่ยังต้องผลิตจะถูกจัดสรรให้คาบที่เหลือตามสัดส่วนเวลาทำงาน: ยอดที่ต้องผลิตคงเหลือ × นาทีของคาบ ÷ เวลาทำงานที่เหลือ</p>
+        <p>ผลรวม HOURLY TARGET ของทุกแถวอาจไม่เท่ากับเป้าทั้งวัน เพราะรวมเป้าประวัติของคาบที่จบแล้ว ให้ดูแถบคาดการณ์สิ้นวันเพื่อประเมินว่าแผนปัจจุบันยังไปถึงเป้าทั้งวันได้หรือไม่</p>
       </article>
       <article class="formula-summary-item" data-formula="qc" data-i18n-html="formula.qc">
         <h3>QC PASS (งานที่ตรวจผ่าน)</h3>
@@ -129,13 +134,11 @@
           <li>ลูกศรขึ้นสีเขียว = ทำได้เกินเป้าสะสม</li>
           <li>ไม่มีลูกศร = เท่ากับเป้าพอดี</li>
         </ul>
-        <p><b>ตัวอย่าง:</b> ถึงชั่วโมง 10:00-11:00 ทำ QC สะสมได้ 115 ชิ้น แต่เป้าสะสม 245 ชิ้น จึงแสดง ↓130</p>
       </article>
       <article class="formula-summary-item" data-formula="bal" data-i18n-html="formula.bal">
         <h3>BALANCE WIP (งานค้างในสาย)</h3>
         <p>งานที่ยังอยู่ในสายเย็บ ยังไม่ผ่าน QC ออกไป</p>
         <p><b>งานค้างตอนนี้ = งานค้างชั่วโมงก่อน + งานที่ป้อนเข้าใหม่ − งานที่ผ่าน QC ออกไป</b></p>
-        <p><b>ตัวอย่าง:</b> เริ่มวันมีงานค้าง 172 ชั่วโมงแรกป้อนเข้า 82 ผ่าน QC 25 งานค้างจึงเป็น 172 + 82 − 25 = <b>229</b> แล้วใช้ 229 เป็นจุดเริ่มของชั่วโมงถัดไป</p>
       </article>
       <article class="formula-summary-item" data-formula="fn" data-i18n-html="formula.fn">
         <h3>SCAN BOX (งานที่สแกนกล่องแล้ว)</h3>

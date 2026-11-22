@@ -179,6 +179,11 @@ body:has(.game-settings-dialog[open]){overflow:hidden}
 .display-toggle input:focus-visible+.display-switch{outline:2px solid var(--cyan);outline-offset:2px}
 .settings-panel .setting-error{color:var(--red)}
 .tblcard{display:flex;flex:1;background:var(--tbl);border-radius:14px;border:3px solid #6b7488;padding:4px 12px 8px}
+.forecast-strip{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;padding:8px 12px;border-left:3px solid var(--cyan);background:var(--panel)}
+.forecast-strip div{display:flex;min-width:0;flex-direction:column}
+.forecast-strip span{color:var(--mut);font-size:11px;line-height:1.35}
+.forecast-strip strong{font-size:18px;font-variant-numeric:tabular-nums}
+@media(max-width:560px){.forecast-strip{grid-template-columns:repeat(2,minmax(0,1fr))}}
 table.spf{align-self:flex-start;width:100%;height:auto;border-collapse:collapse;table-layout:fixed;color:#fff}
 table.spf col:nth-child(1){width:17%}
 table.spf col:nth-child(n+2){width:13.833333%}
@@ -240,7 +245,7 @@ section.lower>h2:first-child{margin-top:12px}
 .formula-summary{margin-top:20px;padding-top:16px;border-top:1px solid var(--line)}
 .formula-summary h2{margin:0 0 6px;color:var(--cyan);font-size:17px}
 .formula-summary-item{padding:14px 0;border-top:1px solid var(--line)}
-.formula-summary-item h3{margin:0 0 6px;color:var(--cyan);font-size:14px}
+.formula-summary-item h3{display:none}
 .formula-summary-item p,.formula-summary-item ul{margin:6px 0;font-size:13px;line-height:1.6}
 .formula-summary-item ul{padding-left:18px}
 .formula-live{margin-top:12px;padding:10px 12px;background:var(--tbl);border:1px solid var(--line);border-radius:8px}

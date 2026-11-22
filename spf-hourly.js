@@ -309,9 +309,11 @@ function arrow(d) {
 function renderLesson(R) {
   const t = window.WIP_I18N.t;
   const x = R.rows[lessonRow], row = S.rows[lessonRow], previous = S.rows[lessonRow - 1];
-  const extraFormula = x.remain > 0
-    ? `round(${f(x.shortfall)} × ${f(x.m)} ÷ ${f(x.remain)}) = ${f(x.extra)}`
-    : t('lesson.noTime');
+  const targetCalculation = x.isForecast
+    ? `${t('forecast.actualQc')}: ${f(x.completedQc)} | ${t('forecast.remaining')}: ${f(x.remainingNeed)}
+${t('schedule.minutes')}: ${f(x.m)} / ${t('forecast.remainingMinutes')}: ${f(x.remainingMinutes)}
+${x.remainingMinutes > 0 ? `${f(x.remainingNeed)} × ${f(x.m)} ÷ ${f(x.remainingMinutes)} = ${f(x.raw)}` : t('lesson.noTime')} → ${t('metric.tgt')} ${f(x.target)} (${f(x.extra)} ${t('forecast.adjustment')})`
+    : t('forecast.completedTarget', { base: f(x.b), target: f(x.target) });
   const steps = [
     {
       title: t('lesson.startTitle'),
@@ -323,10 +325,7 @@ function renderLesson(R) {
     {
       title: t('lesson.targetTitle'),
       description: t('lesson.targetDesc'),
-      calculation: t('lesson.targetCalc', {
-        baseBefore: f(x.cumBBefore), qcBefore: f(x.cumQBefore), shortfall: f(x.shortfall), extraFormula,
-        base: f(x.b), extra: f(x.extra), target: f(x.target)
-      })
+      calculation: targetCalculation
     },
     {
       title: t('lesson.loadTitle'),
@@ -369,6 +368,10 @@ function selectLessonCell(R) {
 function update() {
   if (gameIsOpen && gameSession) { renderGameBoard(); return; }
   const R = calc();
+  $('#forecastDailyTarget').textContent = f(R.forecast.dailyTarget);
+  $('#forecastActualQc').textContent = f(R.forecast.actualQcToDate);
+  $('#forecastRemaining').textContent = f(R.forecast.requiredRemaining);
+  $('#forecastProjected').textContent = f(R.forecast.projectedEndOfDayQc);
   syncScheduleTable();
   const shownCount = visibleRowCount();
   R.rows.forEach(x => {
@@ -391,10 +394,10 @@ function update() {
     const fd = g('fn').querySelector('small'); fd.className = 'diff' + (x.fnDiff > 0 ? ' up' : ''); fd.innerHTML = arrow(x.fnDiff);
   });
   const shownRows = R.rows.slice(0, shownCount);
-  const T = { tl: 0, load: 0, tgt: 0, qc: 0, fn: 0, b: 0 };
+  const T = { tl: 0, load: 0, tgt: 0, qc: 0, fn: 0, b: 0, extra: 0 };
   shownRows.forEach(row => {
     T.tl += row.tl; T.load += row.load; T.tgt += row.target;
-    T.qc += row.qc; T.fn += row.fn; T.b += row.b;
+    T.qc += row.qc; T.fn += row.fn; T.b += row.b; T.extra += row.extra;
   });
   T.bal = shownRows.at(-1).bal;
   T.qcDiff = shownRows.at(-1).qcDiff;
@@ -413,24 +416,6 @@ function update() {
 }
 
 function td(i, c) { return cells[i + '_' + c]; }
-function renderFormulaTarget(R) {
-  const live = $('#formulaTargetLive');
-  if (!live) return;
-  const t = window.WIP_I18N.t;
-  const rowIndex = sel.c === 'tgt' && sel.i >= 0 ? sel.i : Math.max(0, Math.min(lessonRow, R.rows.length - 1));
-  const x = R.rows[rowIndex], row = S.rows[rowIndex];
-  const options = S.rows.map((item, index) => `<option value="${index}"${index === rowIndex ? ' selected' : ''}>${item.l}</option>`).join('');
-  const extraFormula = x.remain > 0
-    ? `round(${f(x.shortfall)} × ${f(x.m)} ÷ ${f(x.remain)}) = round(${f(x.raw)}) = ${f(x.extra)}`
-    : t('lesson.noTime');
-  live.innerHTML = `<label for="formulaTargetPeriod">${t('formula.tgt.period')}<select id="formulaTargetPeriod">${options}</select></label>
-    <p><b>${t('schedule.baseTarget')} ${row.l}:</b> ${f(x.b)}</p>
-    <p><b>${t('formula.tgt.baseBefore')}:</b> ${f(x.cumBBefore)}</p>
-    <p><b>${t('formula.tgt.qcBefore')}:</b> ${f(x.cumQBefore)}</p>
-    <p><b>${t('formula.tgt.shortfall')}:</b> max(0, ${f(x.cumBBefore)} − ${f(x.cumQBefore)}) = ${f(x.shortfall)}</p>
-    <p><b>${t('formula.tgt.extra')}:</b> ${extraFormula}</p>
-    <p><b>${t('formula.tgt.result')}:</b> ${f(x.b)} + ${f(x.extra)} = ${f(x.target)}</p>`;
-}
 function paint(R) {
   $$('.sel').forEach(e => e.classList.remove('sel'));
   $$('.dep').forEach(e => e.classList.remove('dep'));
@@ -449,7 +434,6 @@ function paint(R) {
   $$('.formula-summary-item').forEach(item => {
     item.hidden = item.dataset.formula !== c;
   });
-  renderFormulaTarget(R);
   $('#side').scrollTop = 0;
 }
 function explain(R, i, c) {
@@ -476,7 +460,6 @@ max(0, ${f(x.target)} − ${f(x.balBefore)}) = ${f(gap)}
 ${f(gap)} × 1.25 = ${f(gap * 1.25)} → ${t('explain.roundedLoad')} = ${f(x.tl)}`;
     return head + `<div class="formula">${formula}</div>
     <div class="calc">${calculation}</div>
-    <div class="why">${t(first ? 'explain.tlFirstWhy' : 'explain.tlWhy')}</div>
     ${x.tl === 0 ? `<div class="note">${t(first ? 'explain.tlFirstNote' : 'explain.tlNote')}</div>` : ''}`;
   }
   if (c === 'load') {
@@ -487,29 +470,30 @@ ${f(gap)} × 1.25 = ${f(gap * 1.25)} → ${t('explain.roundedLoad')} = ${f(x.tl)
     <div class="why">${t('explain.loadInput')}<br><br>${why}</div>`;
   }
   if (c === 'tgt') {
-    const first = i === 0;
-    const calculation = t('lesson.targetCalc', {
-      baseBefore: f(x.cumBBefore), qcBefore: f(x.cumQBefore), shortfall: f(x.shortfall),
-      extraFormula: x.remain > 0 ? `round(${f(x.shortfall)} × ${f(x.m)} ÷ ${f(x.remain)}) = ${f(x.extra)}` : t('lesson.noTime'),
-      base: f(x.b), extra: f(x.extra), target: f(x.target)
-    });
-    return head + `<div class="formula">${t('explain.tgtWhy')}</div><div class="calc">${calculation}</div>${first ? `<div class="why">${t('explain.firstPeriod')}</div>` : ''}`;
+    const formula = `${t('metric.tgt')} = ${t('schedule.baseTarget')} + EXTRA<br>EXTRA = round(ยอดค้างต้องผลิต × นาทีคาบ ÷ นาทีที่เหลือ)`;
+    const completedQc = x.isForecast ? x.completedQc : x.cumQBefore;
+    const remainingNeed = x.isForecast
+      ? x.remainingNeed
+      : Math.max(0, Math.round(R.T.b - completedQc));
+    const allocation = x.remainingMinutes > 0
+      ? `${f(remainingNeed)} × ${f(x.m)} ÷ ${f(x.remainingMinutes)} = ${f(x.raw)}`
+      : t('lesson.noTime');
+    const calculation = `${t('forecast.actualQc')}: ${f(completedQc)} | ${t('forecast.remaining')}: ${f(remainingNeed)}<br>${t('forecast.allocation')}: ${allocation}<br>${t('metric.tgt')}: ${f(x.target)} (${f(x.extra)} ${t('forecast.adjustment')})`;
+    return head + `<div class="formula">${formula}</div><div class="calc">${calculation}</div>`;
   }
   if (c === 'qc') {
     const arrowMeaning = x.qcDiff < 0 ? t('explain.qcBehind', { amount: f(Math.abs(x.qcDiff)) }) : x.qcDiff > 0 ? t('explain.qcAhead', { amount: f(x.qcDiff) }) : t('explain.qcEqual');
-    return head + `<div class="formula">${t('metric.qc')} = period_qc_pass<br>${t('explain.qcArrow')} = Σ${t('metric.qc')} − Σ${t('metric.tgt')}</div>
-    <div class="calc">${t('metric.qc')} = ${f(x.qc)} | Σ${t('metric.qc')} = ${f(x.cumQ)} | Σ${t('metric.tgt')} = ${f(x.cumT)}<br>${arrowMeaning}</div>
-    <div class="why">${t('explain.qcGreen')}<br>${t('explain.qcInput')}</div>`;
+    return head + `<div class="formula">${t('metric.qc')} = period_qc_pass<br>${t('explain.qcArrow')} = Σ${t('metric.qc')} − Σ${t('schedule.baseTarget')}</div>
+    <div class="calc">${t('metric.qc')} = ${f(x.qc)} | Σ${t('metric.qc')} = ${f(x.cumQ)} | Σ${t('schedule.baseTarget')} = ${f(x.cumT)}<br>${arrowMeaning}</div>`;
   }
   if (c === 'bal') {
     return head + `<div class="formula">${t('metric.bal')} = ${t('explain.balanceBefore')} + ${t('metric.load')} − ${t('metric.qc')}</div>
-    <div class="calc">${f(x.balBefore)} + ${f(x.load)} − ${f(x.qc)} = ${f(x.bal)}</div>
+    <div class="calc">${t('explain.balanceBefore')}: ${f(x.balBefore)} | ${t('metric.load')}: ${f(x.load)} | ${t('metric.qc')}: ${f(x.qc)}<br>${t('metric.bal')}: ${f(x.balBefore)} + ${f(x.load)} − ${f(x.qc)} = ${f(x.bal)}</div>
     <div class="why">${t('explain.balanceWhy')}</div>`;
   }
   if (c === 'fn') {
-    return head + `<div class="formula">${t('metric.fn')} = period_fn_qty<br>${t('explain.qcArrow')} = Σ${t('metric.fn')} − Σ${t('metric.tgt')}</div>
-    <div class="calc">${t('metric.fn')} = ${f(x.fn)} | Σ${t('metric.fn')} = ${f(x.cumF)} | Σ${t('metric.tgt')} = ${f(x.cumT)}<br>${t('metric.fn')} − ${t('metric.tgt')} = ${f(x.fnDiff)}</div>
-    <div class="why">${t('explain.fnGreen')}<br>${t('explain.fnSeparate')}</div>`;
+    return head + `<div class="formula">${t('metric.fn')} = period_fn_qty<br>${t('explain.qcArrow')} = Σ${t('metric.fn')} − Σ${t('schedule.baseTarget')}</div>
+    <div class="calc">${t('metric.fn')} = ${f(x.fn)} | Σ${t('metric.fn')} = ${f(x.cumF)} | Σ${t('schedule.baseTarget')} = ${f(x.cumT)}<br>${t('metric.fn')} − ${t('schedule.baseTarget')} = ${f(x.fnDiff)}</div>`;
   }
 }
 function explainSum(R, c) {
@@ -518,10 +502,10 @@ function explainSum(R, c) {
   const list = k => R.rows.map(x => f(x[k])).join(' + ');
   if (c === 'tl') return head + `<div class="formula">${t('explain.sumRows')}</div><div class="calc">${list('tl')} = ${f(T.tl)}</div>`;
   if (c === 'load') return head + `<div class="formula">Σ ${t('metric.load')}</div><div class="calc">${list('load')} = ${f(T.load)}</div><div class="why">${t('explain.sumLoadColor', { limit: f(1.25 * T.tl), status: t(T.loadCls === 'hi' ? 'explain.statusHigh' : T.loadCls === 'lo' ? 'explain.statusLow' : 'explain.statusOk') })}</div>`;
-  if (c === 'tgt') return head + `<div class="formula">Σ ${t('metric.tgt')}</div><div class="calc">${list('target')} = ${f(T.tgt)}<br>${t('explain.sumTarget', { base: f(T.b), extra: f(T.extra) })}</div><div class="why">${t('explain.extraWhy')}</div>`;
-  if (c === 'qc') return head + `<div class="formula">Σ ${t('metric.qc')} | ${t('explain.qcArrow')} = Σ${t('metric.qc')} − Σ${t('metric.tgt')}</div><div class="calc">${list('qc')} = ${f(T.qc)}<br>${f(T.qc)} − ${f(T.tgt)} = ${f(T.qcDiff)}</div>`;
+  if (c === 'tgt') return head + `<div class="formula">Σ ${t('metric.tgt')}</div><div class="calc">${list('target')} = ${f(T.tgt)}<br>${t('explain.sumTarget', { base: f(T.b), extra: f(T.extra) })}<br>${t('forecast.projected')}: ${f(R.forecast.projectedEndOfDayQc)}</div><div class="why">${t('explain.extraWhy')}</div>`;
+  if (c === 'qc') return head + `<div class="formula">Σ ${t('metric.qc')} | ${t('explain.qcArrow')} = Σ${t('metric.qc')} − Σ${t('schedule.baseTarget')}</div><div class="calc">${list('qc')} = ${f(T.qc)}<br>${f(T.qc)} − ${f(T.cumT)} = ${f(T.qcDiff)}</div>`;
   if (c === 'bal') return head + `<div class="formula">${t('explain.sumBalance')}</div><div class="calc">= ${f(T.bal)}</div>`;
-  if (c === 'fn') return head + `<div class="formula">Σ ${t('metric.fn')} | ${t('explain.qcArrow')} = Σ${t('metric.fn')} − Σ${t('metric.tgt')}</div><div class="calc">${list('fn')} = ${f(T.fn)}<br>${f(T.fn)} − ${f(T.tgt)} = ${f(T.fnDiff)}</div>`;
+  if (c === 'fn') return head + `<div class="formula">Σ ${t('metric.fn')} | ${t('explain.qcArrow')} = Σ${t('metric.fn')} − Σ${t('schedule.baseTarget')}</div><div class="calc">${list('fn')} = ${f(T.fn)}<br>${f(T.fn)} − ${f(T.cumT)} = ${f(T.fnDiff)}</div>`;
 }
 
 document.addEventListener('input', e => {
@@ -556,12 +540,6 @@ document.addEventListener('input', e => {
     clearScenarioSelectionForManualEdit();
     update();
   }
-});
-document.addEventListener('change', e => {
-  if (e.target.id !== 'formulaTargetPeriod') return;
-  lessonRow = Number(e.target.value);
-  sel = { i: lessonRow, c: 'tgt' };
-  update();
 });
 $('#shiftStart').addEventListener('change', () => updateShiftSettings($('#shiftStart')));
 $('#shiftEnd').addEventListener('change', () => updateShiftSettings(shiftEndPicker));
@@ -1375,19 +1353,15 @@ function openGameAnswerExplanation(input) {
   } else if (field === 'tgt') {
     formula = gameText('game.explain.tgt');
     const period = S.rows[rowIndex].l;
-    const extraCalculation = row.remain > 0
-      ? gameText('game.explain.extraCalc', {
-          shortfall: f(row.shortfall), minutes: f(row.m), remain: f(row.remain), raw: f(row.raw), extra: f(row.extra)
-        })
-      : gameText('lesson.noTime');
-    calculation = [
-      `${gameText('game.explain.baseTarget', { period })}: ${f(row.b)}`,
-      `${gameText('game.explain.baseBefore')}: ${f(row.cumBBefore)}`,
-      `${gameText('game.explain.qcBefore')}: ${f(row.cumQBefore)}`,
-      `${gameText('game.explain.shortfall')}: max(0, ${f(row.cumBBefore)} − ${f(row.cumQBefore)}) = ${f(row.shortfall)}`,
-      `${gameText('game.explain.extra')}: ${extraCalculation}`,
-      `${gameText('metric.tgt')}: ${f(row.b)} + ${f(row.extra)} = ${f(answer)}`
-    ].join('\n');
+    calculation = row.isForecast
+      ? [
+          `${gameText('game.explain.baseTarget', { period })}: ${f(row.b)}`,
+          `${gameText('forecast.actualQc')}: ${f(row.completedQc)}`,
+          `${gameText('forecast.remaining')}: ${f(row.remainingNeed)}`,
+          `${gameText('forecast.allocation')}: ${f(row.remainingNeed)} × ${f(row.m)} ÷ ${f(row.remainingMinutes)} = ${f(row.raw)}`,
+          `${gameText('metric.tgt')}: ${f(answer)}`
+        ].join('\n')
+      : gameText('forecast.completedTarget', { base: f(row.b), target: f(answer) });
     reason = gameText('game.explain.tgtWhy');
   } else {
     formula = gameText('game.explain.bal');
